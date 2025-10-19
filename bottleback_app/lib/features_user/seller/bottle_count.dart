@@ -8,12 +8,12 @@ class BottleCountScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-
+                                           
     return Scaffold(
       backgroundColor: const Color(0xFFB2F5E6), // Setting a background color for the screen
       // --- ส่วนที่เพิ่มเข้ามา ---
       appBar: AppBar(
-        backgroundColor: const Color(0xFFB2F5E6),
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         elevation: 0,
         // ปุ่มย้อนกลับ
         leading: IconButton(

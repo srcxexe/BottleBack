@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'bottle_count.dart';
-import 'sales_history.dart';
-import 'profile.dart';
+import 'sales_history.dart'; // <-- ต้องมี
+import 'profile.dart';      // <-- ต้องมี
 
 class SellerDashboard extends StatefulWidget {
   const SellerDashboard({Key? key}) : super(key: key);
@@ -40,63 +40,49 @@ class _SellerDashboardState extends State<SellerDashboard> {
     }
   }
 
+  // แก้ไข: List ต้องมี 4 รายการ ตามจำนวนปุ่มใน BottomNavigationBar
   final List<Widget> _screens = [
-    const DashboardHome(),
-    const BottleCountScreen(),
-
+    const DashboardHome(),       // Index 0: Home
+    const BottleCountScreen(),   // Index 1: Add/View
+    const SalesHistoryScreen(),  // Index 2: History
+    const ProfileScreen(),       // Index 3: Profile
   ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFB2F5E6),
-      body: _screens[_currentIndex],
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(Icons.home_rounded, 0),
-                _buildNavItem(Icons.add_circle_outline_rounded, 1),
-                _buildNavItem(Icons.shopping_cart_rounded, 2),
-                _buildNavItem(Icons.person_rounded, 3),
-              ],
-            ),
+      body: _screens[_currentIndex], // แสดงหน้าตาม Index ที่เลือก
+      
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: _onItemTapped,
+        selectedItemColor: const Color(0xFF00BFA5), // สีเขียวหลัก
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            label: 'Home',
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, int index) {
-    final isSelected = _currentIndex == index;
-    return GestureDetector(
-      onTap: () {
-        setState(() => _currentIndex = index);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF00BFA5) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(
-          icon,
-          color: isSelected ? Colors.white : Colors.grey,
-          size: 28,
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add_circle_outline_rounded),
+            label: 'Add',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_basket_outlined),
+            label: 'History',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: 'Profile',
+          ),
+        ],
       ),
     );
   }
