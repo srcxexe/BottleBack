@@ -13,7 +13,7 @@ import 'package:bottleback_app/main_user.dart';
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const BottleBackUserApp());
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);
