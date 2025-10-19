@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// ลบ import '../seller/dashboard.dart'; ที่ไม่ได้ใช้ออก
-// import '../seller/dashboard.dart';
 
 class SellerRegisterScreen extends StatefulWidget {
   const SellerRegisterScreen({Key? key}) : super(key: key);
@@ -52,9 +50,13 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
     super.dispose();
   }
 
+
   Future<void> _register() async {
+    // Validate Step 2 form fields
     if (!_formKey.currentState!.validate()) return;
-    if (_currentStep == 1 && _selectedBank == null) {
+    
+    // Additional check for dropdown
+    if (_selectedBank == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('กรุณาเลือกธนาคาร')),
       );
@@ -66,7 +68,8 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
     try {
       // สร้างบัญชีใน Firebase Auth
       final email = '${_phoneController.text}@bottleback.com';
-      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final credential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: _passwordController.text,
       );
@@ -93,16 +96,11 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
       });
 
       // --- ส่วนที่แก้ไข ---
-      // ไม่มีการเรียก Navigator ที่นี่แล้ว
-      // AuthGate หรือ StreamBuilder จะจัดการเปลี่ยนหน้าให้อัตโนมัติ
-      // if (mounted) {
-      //   Navigator.pushReplacement(
-      //     context,
-      //     MaterialPageRoute(
-      //       builder: (context) => const SellerDashboard(),
-      //     ),
-      //   );
-      // }
+      // สั่งให้ย้อนกลับไปจนถึงหน้าแรกสุด (AuthGate)
+      // เพื่อให้ AuthGate ตรวจสอบสถานะ login และนำทางไป Dashboard
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
       // --------------------
 
     } on FirebaseAuthException catch (e) {
@@ -131,6 +129,7 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
     }
   }
 
+  // ... existing UI code (_buildStep1, _buildStep2, build method) ...
   Widget _buildStep1() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -473,7 +472,10 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                   ),
                   const SizedBox(height: 30),
                   // Step content
-                  _currentStep == 0 ? _buildStep1() : _buildStep2(),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: _currentStep == 0 ? _buildStep1() : _buildStep2(),
+                  ),
                   const SizedBox(height: 30),
                   // Buttons
                   Row(
@@ -521,7 +523,7 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                                     }
                                   },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFB2F5E6),
+                              backgroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -558,3 +560,4 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
     );
   }
 }
+
