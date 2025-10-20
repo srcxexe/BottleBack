@@ -20,9 +20,9 @@ class _BottleCountScreenState extends State<BottleCountScreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      backgroundColor:kBackgroundColor,
       appBar: AppBar(
-        backgroundColor: kBackgroundColor,
+        backgroundColor: Color(0xFFFFFFFF),
         elevation: 0,
         title: const Text(
           'Bottles Count',
