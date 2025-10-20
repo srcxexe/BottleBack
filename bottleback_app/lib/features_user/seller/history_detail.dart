@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
-// --- Constants (อ้างอิงจาก dashboard.dart) ---
-const Color kBackgroundColor = Color(0xFFB2F5E6); // *** สีพื้นหลังใหม่ ***
-const Color kPrimaryColor = Color(0xFF00BFA5); // *** สีหลักใหม่ ***
+// --- Constants (อ้างอิงจาก dashboard.dart) ---\r\n
+const Color kBackgroundColor = Color(0xFFB2F5E6); 
+const Color kPrimaryColor = Color(0xFF00BFA5); 
+const Color kDarkTextColor = Colors.black87;
 const Color kAccentColor = Color(0xFFFFCC80); 
 
 class HistoryDetailScreen extends StatelessWidget {
@@ -12,13 +13,142 @@ class HistoryDetailScreen extends StatelessWidget {
 
   const HistoryDetailScreen({Key? key, required this.historyId}) : super(key: key);
 
+  // --------------------------------------------------
+  // 1. Helper Functions สำหรับสถานะและสี
+  // --------------------------------------------------
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Completed':
+        return Colors.green.shade600;
+      case 'Rejected':
+        return Colors.red.shade600;
+      case 'In Progress':
+        return Colors.orange.shade700;
+      case 'Pending':
+      default:
+        return Colors.blue.shade600;
+    }
+  }
+  
+  String _getThaiStatus(String status) {
+    switch (status) {
+      case 'Completed':
+        return 'ขายสำเร็จ';
+      case 'Rejected':
+        return 'ถูกปฏิเสธ';
+      case 'In Progress':
+        return 'กำลังดำเนินการโอนเงิน';
+      case 'Pending':
+      default:
+        return 'รอการยืนยัน';
+    }
+  }
+
+  // --------------------------------------------------
+  // 2. Widget แสดงรายละเอียดรวม
+  // --------------------------------------------------
+
+  Widget _buildInfoRow({required String label, required String value, required IconData icon, Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: color ?? kPrimaryColor.withOpacity(0.8)), 
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.black54, fontSize: 15), 
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: color ?? kDarkTextColor, 
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --------------------------------------------------
+  // 3. Widget แสดงรายละเอียดการแยกประเภทขวด (Breakdown)
+  // --------------------------------------------------
+  Widget _buildBreakdownCard({
+    required String name,
+    required int count,
+    required double weight,
+    required double money,
+    required Color color,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Padding(
+        padding: const EdgeInsets.all(15.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ชื่อขวดและยอดเงิน
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  name,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+                Text(
+                  '+ ฿ ${money.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: kDarkTextColor,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 20, color: Colors.black12),
+            // รายละเอียดจำนวนและน้ำหนัก
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildInfoRow(
+                  label: 'Units',
+                  value: '$count pcs',
+                  icon: Icons.inventory_2_outlined,
+                  color: Colors.grey.shade600,
+                ),
+                _buildInfoRow(
+                  label: 'Weight',
+                  value: '${weight.toStringAsFixed(3)} kg',
+                  icon: Icons.fitness_center_outlined,
+                  color: Colors.grey.shade600,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --------------------------------------------------
+  // 4. Main Build Method
+  // --------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // *** พื้นหลังของ Scaffold ใช้สีใหม่ ***
       backgroundColor: kBackgroundColor, 
       appBar: AppBar(
-        // *** พื้นหลัง AppBar ใช้สีใหม่ ***
         backgroundColor: kBackgroundColor, 
         elevation: 0,
         title: const Text(
@@ -26,22 +156,16 @@ class HistoryDetailScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            // ตัวอักษร Title เป็นสีดำ (ตัดกับพื้นหลังใหม่)
-            color: Colors.black, 
+            color: kDarkTextColor, 
           ),
         ),
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios, 
-            // ปุ่ม Back เป็นสีดำ (ตัดกับพื้นหลังใหม่)
-            color: Colors.black, 
-            size: 20
-          ),
+          icon: const Icon(Icons.arrow_back_ios, color: kDarkTextColor, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance.collection('sales_history').doc(historyId).get(),
+        future: FirebaseFirestore.instance.collection('sale_requests').doc(historyId).get(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -49,271 +173,148 @@ class HistoryDetailScreen extends StatelessWidget {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
-
-          final data = snapshot.data?.data() as Map<String, dynamic>?;
-
-          if (!snapshot.hasData || data == null) {
-            return const Center(child: Text('Sale history not found.'));
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(child: Text('ไม่พบรายละเอียดคำร้องขายนี้'));
           }
 
+          final data = snapshot.data!.data() as Map<String, dynamic>;
+          
           final totalMoney = (data['totalMoney'] ?? 0.0).toDouble();
+          final totalWeight = (data['totalWeight'] ?? 0.0).toDouble();
           final timestamp = data['timestamp'] as Timestamp?;
-          double totalWeight = (data['totalWeight'] ?? 0.0).toDouble(); 
+          final status = data['status'] as String? ?? 'Unknown';
+
+          // *** ส่วนที่แก้ไข: การดึงข้อมูล breakdown ให้ยืดหยุ่น ***
+          final List<dynamic>? breakdownData = data['breakdown'];
+          final List<Map<String, dynamic>> validBreakdown = 
+              breakdownData?.whereType<Map<String, dynamic>>().toList() ?? [];
           
-          final petCount = data['petCount'] ?? 0;
-          final petWeight = (data['petWeight'] ?? 0.0).toDouble();
-          final hdpeCount = data['hdpeCount'] ?? 0;
-          final hdpeWeight = (data['hdpeWeight'] ?? 0.0).toDouble();
-          final canCount = data['canCount'] ?? 0;
-          final canWeight = (data['canWeight'] ?? 0.0).toDouble();
-
-          if (totalWeight == 0.0 && (petWeight + hdpeWeight + canWeight) > 0) {
-             totalWeight = petWeight + hdpeWeight + canWeight;
-          }
-
-          String dateString = 'N/A';
-          if (timestamp != null) {
-            final DateFormat formatter = DateFormat('dd MMM yyyy, HH:mm:ss');
-            dateString = formatter.format(timestamp.toDate());
-          }
-
-          final totalAllWeight = petWeight + hdpeWeight + canWeight;
+          final date = timestamp != null
+              ? DateFormat('dd MMMM yyyy, HH:mm').format(timestamp.toDate())
+              : 'N/A';
           
+          final statusColor = _getStatusColor(status);
+          final statusText = _getThaiStatus(status);
+
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+            padding: const EdgeInsets.all(15.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header Card (พื้นหลังยังคงเป็นสีขาวเพื่อเน้น)
-                _buildAnimatedHeaderCard(context, totalMoney, totalWeight, dateString, historyId),
-                const SizedBox(height: 30),
-
-                // Breakdown Title
-                const Text(
-                  'Sales Breakdown',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                // 1. Summary Card (ยอดรวมและสถานะ)
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 5)],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ยอดเงินรวม
+                      const Text('Total Revenue', style: TextStyle(fontSize: 16, color: Colors.black54)),
+                      const SizedBox(height: 5),
+                      Text(
+                        '฿ ${totalMoney.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w900,
+                          color: kPrimaryColor,
+                        ),
+                      ),
+                      const Divider(height: 20),
+                      
+                      // สถานะ
+                      _buildInfoRow(
+                        label: 'Status',
+                        value: statusText,
+                        icon: Icons.info_outline,
+                        color: statusColor,
+                      ),
+                      // วันที่
+                      _buildInfoRow(
+                        label: 'Date/Time',
+                        value: date,
+                        icon: Icons.calendar_today_outlined,
+                      ),
+                      // น้ำหนักรวม
+                      _buildInfoRow(
+                        label: 'Total Weight',
+                        value: '${totalWeight.toStringAsFixed(3)} kg',
+                        icon: Icons.scale_outlined,
+                      ),
+                      // รหัสคำร้อง
+                      _buildInfoRow(
+                        label: 'Request ID',
+                        value: historyId,
+                        icon: Icons.numbers,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 15),
+                
+                const SizedBox(height: 25),
+                
+                // 2. Breakdown Section (รายละเอียดขวด)
+                const Text(
+                  'Bottle Breakdown',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kDarkTextColor),
+                ),
+                const SizedBox(height: 10),
 
-                // Breakdown Cards (พื้นหลังยังคงเป็นสีขาวเพื่อเน้น)
-                _buildModernBreakdownCard(
-                  type: 'PET Bottles',
-                  count: petCount,
-                  weight: petWeight,
-                  color: Colors.blue.shade600,
-                  icon: Icons.local_drink_rounded,
-                  totalAllWeight: totalAllWeight,
-                ),
-                _buildModernBreakdownCard(
-                  type: 'HDPE Bottles',
-                  count: hdpeCount,
-                  weight: hdpeWeight,
-                  color: Colors.green.shade600,
-                  icon: Icons.water_drop_rounded,
-                  totalAllWeight: totalAllWeight,
-                ),
-                _buildModernBreakdownCard(
-                  type: 'Aluminum Cans',
-                  count: canCount,
-                  weight: canWeight,
-                  color: Colors.orange.shade600,
-                  icon: Icons.egg_rounded, 
-                  totalAllWeight: totalAllWeight,
-                ),
+                if (validBreakdown.isEmpty)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(15.0),
+                      child: Text('ไม่พบรายละเอียดการแยกประเภทขวด'),
+                    ),
+                  )
+                else
+                  ...validBreakdown.map((item) {
+                    return _buildBreakdownCard(
+                      name: item['bottleType'] ?? 'Unknown Type',
+                      count: (item['count'] ?? 0) as int,
+                      weight: (item['weight'] as num? ?? 0.0).toDouble(), 
+                      money: (item['money'] as num? ?? 0.0).toDouble(),
+                      color: kPrimaryColor, 
+                    );
+                  }).toList(),
 
-                const SizedBox(height: 50),
+                // 3. แสดงสลิป (ถ้ามีและสถานะเป็น Completed)
+                if (status == 'Completed' && data['slipImageUrl'] != null)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 25),
+                      const Text(
+                        'Payment Slip',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kDarkTextColor),
+                      ),
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: Image.network(
+                          data['slipImageUrl'] as String,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 200,
+                              color: Colors.grey.shade300,
+                              alignment: Alignment.center,
+                              child: const Text('Slip image not found or failed to load.'),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+
+                const SizedBox(height: 40),
               ],
             ),
           );
         },
-      ),
-    );
-  }
-
-  // --- Header Card (ใช้สีขาว) ---
-  Widget _buildAnimatedHeaderCard(BuildContext context, double money, double weight, String date, String id) {
-    return Container(
-      padding: const EdgeInsets.all(25),
-      decoration: BoxDecoration(
-        color: Colors.white, // พื้นหลังสีขาว
-        borderRadius: BorderRadius.circular(25),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1), 
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Total Sale Amount',
-                style: TextStyle(fontSize: 18, color: Colors.black54, fontWeight: FontWeight.w500), 
-              ),
-              Icon(Icons.monetization_on_rounded, color: kPrimaryColor, size: 28), // ไอคอนใช้สีหลักใหม่
-            ],
-          ),
-          const SizedBox(height: 10),
-          TweenAnimationBuilder<double>(
-            tween: Tween<double>(begin: 0, end: money),
-            duration: const Duration(milliseconds: 800),
-            builder: (context, value, child) {
-              return Text(
-                '฿ ${value.toStringAsFixed(2)}',
-                style: TextStyle(
-                  fontSize: 52,
-                  fontWeight: FontWeight.w900,
-                  color: kPrimaryColor, // ยอดเงินใช้สีหลักใหม่
-                ),
-              );
-            },
-          ),
-          const Divider(color: Colors.grey, height: 30), 
-          _buildElegantDetailRow(
-            label: 'Transaction ID',
-            value: id,
-            icon: Icons.credit_card_rounded,
-            color: Colors.black, 
-          ),
-          _buildElegantDetailRow(
-            label: 'Transaction Time',
-            value: date,
-            icon: Icons.calendar_today_rounded,
-            color: Colors.black, 
-          ),
-          _buildElegantDetailRow(
-            label: 'Total Weight',
-            value: '${weight.toStringAsFixed(3)} kg',
-            icon: Icons.scale_rounded,
-            color: Colors.black, 
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildElegantDetailRow({required String label, required String value, required IconData icon, required Color color}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: color.withOpacity(0.6)), 
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(color: color.withOpacity(0.6), fontSize: 13), 
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: color, 
-                    fontSize: 15,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- Breakdown Card (ใช้สีขาว) ---
-  Widget _buildModernBreakdownCard({
-    required String type,
-    required int count,
-    required double weight,
-    required Color color,
-    required IconData icon,
-    required double totalAllWeight, 
-  }) {
-    if (count == 0 && weight == 0.0) return const SizedBox.shrink(); 
-
-    double percentage = totalAllWeight > 0 ? (weight / totalAllWeight) : 0;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 30, color: color),
-              const SizedBox(width: 15),
-              Expanded(
-                child: Text(
-                  type,
-                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: color),
-                ),
-              ),
-              Text(
-                '${(percentage * 100).toStringAsFixed(1)}%',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color.withOpacity(0.8)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 15),
-          LinearProgressIndicator(
-            value: percentage,
-            backgroundColor: color.withOpacity(0.2),
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(5),
-          ),
-          const SizedBox(height: 15),
-          _buildBreakdownItem('Units', '$count pcs', Icons.inventory_2_outlined),
-          _buildBreakdownItem('Weight', '${weight.toStringAsFixed(3)} kg', Icons.fitness_center_outlined),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBreakdownItem(String label, String value, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.grey.shade600),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.black87, fontSize: 15),
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.black, fontSize: 15),
-          ),
-        ],
       ),
     );
   }

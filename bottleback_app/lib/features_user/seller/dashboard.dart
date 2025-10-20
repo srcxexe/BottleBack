@@ -123,12 +123,14 @@ class _DashboardHomeState extends State<DashboardHome> {
     }
   }
 
+  // *** ฟังก์ชันแก้ไข: อัปเดตเพื่อดึงข้อมูล Bank/Contact ของผู้ขายและส่งสถานะ Pending ***
   Future<void> _showConfirmSaleDialog(double totalMoney) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     
-    final doc = await FirebaseFirestore.instance.collection('sellers').doc(user.uid).get();
-    final data = doc.data() as Map<String, dynamic>;
+    // ดึงข้อมูล Seller ปัจจุบัน (รวมถึงข้อมูล Bank/Contact)
+    final sellerDoc = await FirebaseFirestore.instance.collection('sellers').doc(user.uid).get();
+    final data = sellerDoc.data() as Map<String, dynamic>;
 
     return showDialog<void>(
       context: context,
@@ -156,8 +158,11 @@ class _DashboardHomeState extends State<DashboardHome> {
             ),
             ElevatedButton(
               onPressed: () async {
-                // บันทึกรายการขาย
-                await FirebaseFirestore.instance.collection('sale_requests').add({
+                // ข้อมูลผู้ขาย
+                final profileData = sellerDoc.data() as Map<String, dynamic>;
+
+                // ข้อมูลที่จะถูกส่งไปให้แอดมิน (Buyer)
+                final Map<String, dynamic> requestData = {
                   'sellerId': user.uid,
                   'totalMoney': totalMoney,
                   'totalWeight': data['totalWeight'] ?? 0.0,
@@ -167,9 +172,20 @@ class _DashboardHomeState extends State<DashboardHome> {
                   'petWeight': data['petWeight'] ?? 0.0,
                   'hdpeWeight': data['hdpeWeight'] ?? 0.0,
                   'canWeight': data['canWeight'] ?? 0.0,
-                  'status': 'Pending',
+                  
+                  // *** สถานะเริ่มต้น และ ข้อมูลผู้ขายที่ต้องการให้ Buyer เห็น ***
+                  'status': 'Pending', // ระหว่างดำเนินการ
                   'timestamp': FieldValue.serverTimestamp(),
-                });
+                  'sellerName': profileData['name'] ?? 'N/A',
+                  'sellerPhone': profileData['phone'] ?? 'N/A',
+                  'sellerBank': profileData['bank'] ?? 'N/A',
+                  'sellerBankNo': profileData['bankNo'] ?? 'N/A',
+                };
+
+                // บันทึกรายการขายใน collection 'sale_requests'
+                await FirebaseFirestore.instance
+                    .collection('sale_requests')
+                    .add(requestData);
 
                 // รีเซ็ตข้อมูล Inventory ของ Seller
                 await FirebaseFirestore.instance
@@ -190,8 +206,8 @@ class _DashboardHomeState extends State<DashboardHome> {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Sale Request Sent!'),
-                      backgroundColor: Colors.green,
+                      content: Text('Sale Request Sent! Waiting for Admin confirmation.'),
+                      backgroundColor: Colors.blue,
                     ),
                   );
                 }
@@ -281,7 +297,7 @@ class _DashboardHomeState extends State<DashboardHome> {
                   _buildSummaryBox(totalMoney, totalWeight, data),
                   const SizedBox(height: 20),
 
-                  // Mini Summary Boxes (Count Breakdown) - แก้ไขให้เป็นแนวตั้ง
+                  // Mini Summary Boxes (Count Breakdown) - เรียงแนวตั้ง
                   _buildMiniSummaryBoxes(petCount, hdpeCount, canCount),
                   const SizedBox(height: 20),
                   
@@ -353,9 +369,7 @@ class _DashboardHomeState extends State<DashboardHome> {
     );
   }
 
-  // --------------------------------------------------------------------------
-  // *** แก้ไข: Widget สำหรับ Mini Summary Boxes (เปลี่ยนจาก Grid เป็น Column) ***
-  // --------------------------------------------------------------------------
+  // Widget สำหรับ Mini Summary Boxes (เปลี่ยนจาก Grid เป็น Column)
   Widget _buildMiniSummaryBoxes(int petCount, int hdpeCount, int canCount) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,7 +383,7 @@ class _DashboardHomeState extends State<DashboardHome> {
           ),
         ),
         const SizedBox(height: 10),
-        // เปลี่ยนจาก GridView.count เป็น Column เพื่อเรียง Card ลงมา
+        // ใช้ Column เพื่อเรียง Card ลงมา
         Column( 
           children: [
             _buildMiniSummaryBox(
@@ -400,9 +414,8 @@ class _DashboardHomeState extends State<DashboardHome> {
       ],
     );
   }
-  // --------------------------------------------------------------------------
-
-  // Widget สำหรับแต่ละ Box สรุปย่อย (ไม่มีการเปลี่ยนแปลง)
+  
+  // Widget สำหรับแต่ละ Box สรุปย่อย
   Widget _buildMiniSummaryBox({
     required String title, 
     required String value, 
@@ -454,7 +467,7 @@ class _DashboardHomeState extends State<DashboardHome> {
     );
   }
 
-  // Widget สำหรับปุ่มยืนยันการขาย (ไม่มีการเปลี่ยนแปลง)
+  // Widget สำหรับปุ่มยืนยันการขาย
   Widget _buildConfirmSaleButton(double totalMoney) {
     return SizedBox(
       width: double.infinity,
