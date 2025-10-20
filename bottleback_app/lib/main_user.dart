@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+// ต้อง Import หน้าจอทั้งหมดที่ถูกใช้ใน AuthGate
 import 'package:bottleback_app/features_user/role_select.dart';
-import 'package:bottleback_app/features_user/seller/dashboard.dart'; // เพิ่ม import สำหรับ Dashboard
-import 'firebase_options.dart'; // เพิ่ม import สำหรับ firebase_options
+import 'package:bottleback_app/features_user/seller/dashboard.dart'; 
+import 'package:bottleback_app/features_user/buyer/buyer_dashboard.dart'; // **สำคัญ: เพิ่มส่วนนี้**
+import 'firebase_options.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // แก้ไขให้ใช้ DefaultFirebaseOptions เพื่อความถูกต้อง
+  
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -33,13 +35,14 @@ class BottleBackUserApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      // --- ส่วนที่แก้ไข: เปลี่ยน home เป็น AuthGate ---
       home: const AuthGate(),
     );
   }
 }
 
-// --- Widget ใหม่ที่เพิ่มเข้ามา: ประตูตรวจสอบการล็อกอิน ---
+// --------------------------------------------------------------------------
+// AuthGate: Widget ตรวจสอบสถานะการล็อกอิน
+// --------------------------------------------------------------------------
 class AuthGate extends StatelessWidget {
   const AuthGate({Key? key}) : super(key: key);
 
@@ -48,7 +51,7 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // ขณะกำลังรอการเชื่อมต่อ ให้แสดงหน้าโหลด
+        
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(
@@ -57,15 +60,15 @@ class AuthGate extends StatelessWidget {
           );
         }
 
-        // ถ้ามีข้อมูล user (ล็อกอินอยู่) ให้ไปหน้า Dashboard
+        // ถ้ามีข้อมูล User (ล็อกอินอยู่) ให้ไปหน้า Dashboard ของ Seller
         if (snapshot.hasData) {
-          return const SellerDashboard();
+          // เนื่องจาก Seller คือบทบาทที่ต้องล็อกอิน
+          return const SellerDashboard(); 
         }
-
-        // ถ้าไม่มีข้อมูล user (ยังไม่ได้ล็อกอิน) ให้ไปหน้าเลือก Role
+        
+        // ถ้าไม่มีข้อมูล User (ไม่ได้ล็อกอิน) ให้ไปหน้าเลือกบทบาท
         return const RoleSelectScreen();
       },
     );
   }
 }
-

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'auth/seller_login.dart';
+// **แก้ไขพาธให้ถูกต้อง:** อ้างอิงถึง buyer_dashboard.dart
+// สมมติว่า role_select.dart อยู่ใน features_user/ และ buyer/ ก็อยู่ใน features_user/
+import 'auth/buyer_login.dart'; // เพิ่มบรรทัดนี้
+import 'buyer/buyer_dashboard.dart'; 
 
 class RoleSelectScreen extends StatelessWidget {
   const RoleSelectScreen({Key? key}) : super(key: key);
@@ -9,6 +13,7 @@ class RoleSelectScreen extends StatelessWidget {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
+          // ... (โค้ด Gradient Background) ...
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -27,9 +32,14 @@ class RoleSelectScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Mascot Icon
-                  
+                  const Icon(
+                    Icons.recycling, 
+                    size: 80,
+                    color: Color(0xFF00BFA5),
+                  ),
                   
                   const SizedBox(height: 40),
+                  
                   // BottleBack Title
                   const Text(
                     'BottleBack',
@@ -40,10 +50,11 @@ class RoleSelectScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 60),
-                  // Seller Button
+                  
+                  // Seller Button (นำทางไปหน้า Login)
                   SizedBox(
                     width: double.infinity,
-                    height: 65,
+                    height: 100,
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.push(
@@ -54,54 +65,71 @@ class RoleSelectScreen extends StatelessWidget {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00BFA5),
+                        backgroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(15),
+                          side: const BorderSide(color: Color(0xFF00BFA5), width: 3),
                         ),
-                        elevation: 0,
+                        elevation: 10,
+                        shadowColor: const Color(0xFF00BFA5).withOpacity(0.5),
                       ),
                       child: const Text(
                         'Seller',
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Color(0xFF00BFA5),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  // Buyer Button
+                  
+                  const SizedBox(height: 30),
+                  
+                  // Buyer Button (ใช้ InkWell และ onTap นำทางไป BuyerDashboard)
                   SizedBox(
                     width: double.infinity,
-                    height: 65,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: Navigate to Buyer flow
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Buyer feature coming soon!'),
+                    height: 100,
+                    child: InkWell(
+                      onTap: () {
+                        // **นำทางไปยัง BuyerDashboard ทันที**
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const BuyerLoginScreen(), 
                           ),
                         );
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00BFA5),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(15), 
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00BFA5), 
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF00BFA5).withOpacity(0.4),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
                         ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        'Buyer',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                        child: const Center(
+                          child: Text(
+                            'Buyer',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
+                  
                   const SizedBox(height: 80),
+                  
                   // Decorative circles
                   Align(
                     alignment: Alignment.bottomLeft,
@@ -124,6 +152,7 @@ class RoleSelectScreen extends StatelessWidget {
   }
 }
 
+// CustomPainter code 
 class LeafVeinPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
