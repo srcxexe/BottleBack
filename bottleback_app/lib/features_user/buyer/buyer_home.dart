@@ -3,10 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'request_detail_screen.dart';
 
-// --- Constants (สำหรับโค้ดนี้) ---
-const Color kBackgroundColor = Color(0xFFB2F5E6); 
-const Color kPrimaryColor = Color(0xFF00BFA5); 
-const Color kDarkTextColor = Colors.black87;
+// --- Dark Theme Constants ---
+const Color kBackgroundColor = Color(0xFF121212);
+const Color kSurfaceColor = Color(0xFF1E1E1E);
+const Color kPrimaryColor = Color(0xFF00BFA5);
+const Color kWhiteText = Colors.white;
 
 class BuyerHomeScreen extends StatelessWidget {
   const BuyerHomeScreen({Key? key}) : super(key: key);
@@ -20,40 +21,32 @@ class BuyerHomeScreen extends StatelessWidget {
         elevation: 0,
         title: const Text(
           'Sale Requests',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: kDarkTextColor,
-          ),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kWhiteText),
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        // *** สมมติว่ามี collection 'sale_requests' ที่เก็บคำร้องจาก Seller ***
         stream: FirebaseFirestore.instance
             .collection('sale_requests') 
             .orderBy('timestamp', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.grey)));
           }
 
           final requests = snapshot.data?.docs ?? [];
 
           if (requests.isEmpty) {
             return const Center(
-              child: Text(
-                'No pending sale requests.', 
-                style: TextStyle(fontSize: 18, color: Colors.grey)
-              ),
+              child: Text('No pending sale requests.', style: TextStyle(fontSize: 18, color: Colors.grey)),
             );
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(15.0),
+            padding: const EdgeInsets.all(20.0),
             itemCount: requests.length,
             itemBuilder: (context, index) {
               final requestDoc = requests[index];
@@ -63,7 +56,7 @@ class BuyerHomeScreen extends StatelessWidget {
               final totalMoney = (data['totalMoney'] ?? 0.0).toDouble();
               final totalWeight = (data['totalWeight'] ?? 0.0).toDouble();
               final timestamp = data['timestamp'] as Timestamp?;
-              final status = data['status'] ?? 'Pending'; // Pending, Paid, Completed
+              final status = data['status'] ?? 'Pending'; 
 
               String dateString = timestamp != null 
                   ? DateFormat('dd MMM yyyy, HH:mm').format(timestamp.toDate()) 
@@ -92,19 +85,22 @@ class BuyerHomeScreen extends StatelessWidget {
     required String date,
     required String status,
   }) {
-    // กำหนดสีตามสถานะ
     Color statusColor;
-    if (status == 'Paid') {
-      statusColor = Colors.green;
+    Color statusBg;
+    
+    if (status == 'Paid' || status == 'Completed') {
+      statusColor = Colors.greenAccent;
+      statusBg = Colors.green.withOpacity(0.2);
     } else if (status == 'Pending') {
       statusColor = kPrimaryColor;
+      statusBg = kPrimaryColor.withOpacity(0.15);
     } else {
       statusColor = Colors.grey;
+      statusBg = Colors.grey.withOpacity(0.2);
     }
 
     return GestureDetector(
       onTap: () {
-        // นำทางไปยังหน้ารายละเอียดเมื่อกด
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -113,17 +109,13 @@ class BuyerHomeScreen extends StatelessWidget {
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(15),
+        margin: const EdgeInsets.only(bottom: 15),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
+          color: kSurfaceColor, // Dark Card
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 5,
-              offset: const Offset(0, 3),
-            ),
+            BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4)),
           ],
         ),
         child: Column(
@@ -134,37 +126,29 @@ class BuyerHomeScreen extends StatelessWidget {
               children: [
                 Text(
                   'Total: ฿ ${money.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: statusColor,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: statusColor),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusBg,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     status,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: statusColor,
-                    ),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: statusColor),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 10),
             Row(
               children: [
                 const Icon(Icons.scale, size: 16, color: Colors.grey),
                 const SizedBox(width: 5),
                 Text(
                   'Weight: ${weight.toStringAsFixed(3)} kg',
-                  style: const TextStyle(fontSize: 14, color: Colors.black54),
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
                 const Spacer(),
                 const Icon(Icons.calendar_today, size: 14, color: Colors.grey),

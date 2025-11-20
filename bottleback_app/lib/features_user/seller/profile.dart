@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// --- Constants (เพื่อใช้สีเดิม) ---
-const Color kBackgroundColor = Color(0xFFB2F5E6);
+const Color kBackgroundColor = Color(0xFF121212);
+const Color kSurfaceColor = Color(0xFF1E1E1E);
 const Color kPrimaryColor = Color(0xFF00BFA5);
+const Color kWhiteText = Colors.white;
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -14,11 +15,10 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  String _name = 'Loading...';
-  String _phone = 'Loading...';
-  String _bank = 'Loading...';
-  String _bankNo = 'Loading...';
-  bool _isLoading = true;
+  String _name = '...';
+  String _phone = '...';
+  String _bank = '...';
+  String _bankNo = '...';
 
   @override
   void initState() {
@@ -26,272 +26,91 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserData();
   }
 
-  // ดึงข้อมูลผู้ใช้ปัจจุบันจาก Firestore
   Future<void> _loadUserData() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      if (mounted) {
-        setState(() {
-          _name = 'Not Logged In';
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('sellers')
-          .doc(user.uid)
-          .get();
-
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance.collection('sellers').doc(user.uid).get();
       if (doc.exists && mounted) {
         final data = doc.data()!;
         setState(() {
-          _name = data['name'] ?? 'User Name';
-          _phone = data['phone'] ?? 'N/A';
-          _bank = data['bank'] ?? 'N/A';
-          _bankNo = data['bankNo'] ?? 'N/A';
+          _name = data['name'] ?? '';
+          _phone = data['phone'] ?? '';
+          _bank = data['bank'] ?? '';
+          _bankNo = data['bankNo'] ?? '';
         });
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading data: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
     }
-  }
-
-  // ออกจากระบบ
-  Future<void> _logout() async {
-    setState(() => _isLoading = true);
-    try {
-      await FirebaseAuth.instance.signOut();
-      if (mounted) {
-        // นำผู้ใช้กลับไปหน้าเลือก Role หรือหน้า Login
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/', // ให้แน่ใจว่าได้กำหนด root route ไปที่ RoleSelectScreen
-          (Route<dynamic> route) => false,
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error logging out: $e')),
-        );
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  // ฟังก์ชันจำลองสำหรับการแก้ไขโปรไฟล์ (สามารถสร้างหน้า EditProfileScreen ใหม่ได้)
-  void _editProfile() {
-    // ในการพัฒนาจริง ควร Navigator.push ไปยังหน้าแก้ไขโปรไฟล์
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Redirect to Edit Profile Screen... (Not implemented yet)')),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-        elevation: 0,
-        title: const Text(
-          'Profile',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
-        automaticallyImplyLeading: false,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ส่วน Header (User Icon และ Name)
-                    _buildProfileHeader(),
-                    const SizedBox(height: 30),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              const CircleAvatar(
+                radius: 50,
+                backgroundColor: kSurfaceColor,
+                child: Icon(Icons.person, size: 50, color: Colors.grey),
+              ),
+              const SizedBox(height: 15),
+              Text(_name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kWhiteText)),
+              const Text('Seller Account', style: TextStyle(color: Colors.grey)),
+              const SizedBox(height: 40),
 
-                    // ส่วนข้อมูล Contact
-                    _buildInfoCard(
-                      title: 'Contact Information',
-                      children: [
-                        _buildInfoRow('Phone Number', _phone, Icons.phone_outlined),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
+              _buildSectionHeader('Contact Info'),
+              _buildInfoTile(Icons.phone_rounded, 'Phone', _phone),
+              
+              const SizedBox(height: 20),
+              _buildSectionHeader('Bank Details'),
+              _buildInfoTile(Icons.account_balance_rounded, 'Bank', _bank),
+              _buildInfoTile(Icons.credit_card_rounded, 'Account No.', _bankNo),
 
-                    // ส่วนข้อมูล Bank
-                    _buildInfoCard(
-                      title: 'Bank Information',
-                      children: [
-                        _buildInfoRow('Bank Name', _bank, Icons.account_balance_outlined),
-                        _buildInfoRow('Account Number', _bankNo, Icons.credit_card_outlined),
-                      ],
-                    ),
-                    const SizedBox(height: 40),
-
-                    // ปุ่ม Edit Profile (สีดำตามดีไซน์)
-                    _buildActionButton(
-                      label: 'Edit Profile',
-                      icon: Icons.edit_outlined,
-                      color: Colors.black,
-                      onPressed: _editProfile,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // ปุ่ม Logout (สีแดงตามดีไซน์)
-                    _buildActionButton(
-                      label: 'Logout',
-                      icon: Icons.logout,
-                      color: Colors.red,
-                      onPressed: _logout,
-                    ),
-                  ],
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: TextButton.icon(
+                  onPressed: () => FirebaseAuth.instance.signOut().then((_) => Navigator.of(context).pushNamedAndRemoveUntil('/', (r) => false)),
+                  icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                  label: const Text('Sign Out', style: TextStyle(color: Colors.redAccent, fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.red.withOpacity(0.1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  ),
                 ),
-              ),
-            ),
-    );
-  }
-
-  // Widget สำหรับส่วน Header (รูปโปรไฟล์และชื่อ)
-  Widget _buildProfileHeader() {
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 40,
-          backgroundColor: kPrimaryColor,
-          child: const Icon(
-            Icons.person,
-            size: 50,
-            color: Colors.white,
+              )
+            ],
           ),
         ),
-        const SizedBox(height: 10),
-        Text(
-          _name,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Widget สำหรับสร้าง Card ข้อมูล (Contact/Bank)
-  Widget _buildInfoCard({required String title, required List<Widget> children}) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-          ),
-          const Divider(height: 25, thickness: 1),
-          ...children,
-        ],
       ),
     );
   }
 
-  // Widget สำหรับแสดงแต่ละแถวข้อมูลใน Card
-  Widget _buildInfoRow(String label, String value, IconData icon) {
+  Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: kPrimaryColor),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 2,
-            child: Text(
-              '$label:',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.black54,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-              ),
-              textAlign: TextAlign.right,
-            ),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.only(bottom: 10, left: 5),
+      child: Align(alignment: Alignment.centerLeft, child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey))),
     );
   }
 
-  // Widget สำหรับปุ่ม Action (Edit/Logout)
-  Widget _buildActionButton({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: OutlinedButton.icon(
-        onPressed: _isLoading ? null : onPressed,
-        icon: Icon(icon, color: color),
-        label: Text(
-          label,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: color, width: 2),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          backgroundColor: Colors.white,
-        ),
+  Widget _buildInfoTile(IconData icon, String title, String value) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: kSurfaceColor, borderRadius: BorderRadius.circular(16)),
+      child: Row(
+        children: [
+          Icon(icon, color: kPrimaryColor, size: 20),
+          const SizedBox(width: 15),
+          Text(title, style: const TextStyle(color: Colors.grey)),
+          const Spacer(),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, color: kWhiteText)),
+        ],
       ),
     );
   }

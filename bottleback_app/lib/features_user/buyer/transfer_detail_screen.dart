@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'upload_slip_screen.dart';
 
-// --- Constants ---
-const Color kBackgroundColor = Color(0xFFB2F5E6); 
-const Color kPrimaryColor = Color(0xFF00BFA5); 
-const Color kDarkTextColor = Colors.black87;
+// --- Dark Theme Constants ---
+const Color kBackgroundColor = Color(0xFF121212);
+const Color kSurfaceColor = Color(0xFF1E1E1E);
+const Color kPrimaryColor = Color(0xFF00BFA5);
+const Color kWhiteText = Colors.white;
 
 class TransferDetailScreen extends StatelessWidget {
   final String requestId;
@@ -31,21 +32,17 @@ class TransferDetailScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: kBackgroundColor,
         elevation: 0,
-        title: const Text('Transfer Details', style: TextStyle(color: kDarkTextColor, fontWeight: FontWeight.bold)),
+        title: const Text('Transfer Details', style: TextStyle(color: kWhiteText, fontWeight: FontWeight.bold)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
+          icon: const Icon(Icons.arrow_back_ios, color: kWhiteText, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: FutureBuilder<Map<String, dynamic>?>(
         future: _fetchSellerBankData(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
-            return const Center(child: Text('Error loading seller bank data.'));
-          }
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
+          if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) return const Center(child: Text('Error loading seller bank data.', style: TextStyle(color: Colors.grey)));
 
           final sellerData = snapshot.data!;
           final bank = sellerData['bank'] ?? 'N/A';
@@ -62,13 +59,13 @@ class TransferDetailScreen extends StatelessWidget {
                     _buildAmountCard(amount),
                     const SizedBox(height: 30),
                     
-                    const Text('Bank Account Information', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kDarkTextColor)),
-                    const SizedBox(height: 10),
+                    const Text('Bank Account Information', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kWhiteText)),
+                    const SizedBox(height: 15),
 
                     _buildBankCard(bank, bankNo, accountName),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 30),
 
-                    const Text('Steps:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kDarkTextColor)),
+                    const Text('Steps:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kWhiteText)),
                     _buildStep(1, 'Transfer ฿ ${amount.toStringAsFixed(2)} to the account above.'),
                     _buildStep(2, 'Capture the transfer slip.'),
                     _buildStep(3, 'Click "Upload Slip" to complete payment.'),
@@ -85,15 +82,7 @@ class TransferDetailScreen extends StatelessWidget {
                   child: _buildActionButton(
                     label: 'Upload Slip',
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => UploadSlipScreen(
-                            requestId: requestId,
-                            amount: amount,
-                          ),
-                        ),
-                      );
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => UploadSlipScreen(requestId: requestId, amount: amount)));
                     },
                     color: kPrimaryColor,
                   ),
@@ -110,25 +99,19 @@ class TransferDetailScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: kSurfaceColor,
         borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: kPrimaryColor, width: 2),
-        boxShadow: [
-          BoxShadow(color: kPrimaryColor.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 5)),
-        ],
+        border: Border.all(color: kPrimaryColor.withOpacity(0.5), width: 1),
+        boxShadow: [BoxShadow(color: kPrimaryColor.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))],
       ),
       child: Center(
         child: Column(
           children: [
-            const Text('Amount Due:', style: TextStyle(fontSize: 18, color: Colors.black54)),
+            const Text('Amount Due:', style: TextStyle(fontSize: 18, color: Colors.grey)),
             const SizedBox(height: 5),
             Text(
               '฿ ${amount.toStringAsFixed(2)}',
-              style: TextStyle(
-                fontSize: 52,
-                fontWeight: FontWeight.w900,
-                color: kPrimaryColor,
-              ),
+              style: const TextStyle(fontSize: 52, fontWeight: FontWeight.w900, color: kPrimaryColor),
             ),
           ],
         ),
@@ -140,18 +123,15 @@ class TransferDetailScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: kSurfaceColor,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 3)),
-        ],
       ),
       child: Column(
         children: [
           _buildBankDetailRow('Bank Name', bank, Icons.account_balance),
-          const Divider(),
+          const Divider(color: Colors.grey),
           _buildBankDetailRow('Account No.', bankNo, Icons.credit_card),
-          const Divider(),
+          const Divider(color: Colors.grey),
           _buildBankDetailRow('Account Name', accountName, Icons.person),
         ],
       ),
@@ -165,8 +145,8 @@ class TransferDetailScreen extends StatelessWidget {
         children: [
           Icon(icon, size: 20, color: kPrimaryColor),
           const SizedBox(width: 10),
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 15, color: Colors.black54))),
-          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kDarkTextColor)),
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 15, color: Colors.grey))),
+          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kWhiteText)),
         ],
       ),
     );
@@ -174,24 +154,23 @@ class TransferDetailScreen extends StatelessWidget {
 
   Widget _buildStep(int number, String text) {
     return Padding(
-      padding: const EdgeInsets.only(top: 8.0),
+      padding: const EdgeInsets.only(top: 12.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            radius: 10,
+            radius: 12,
             backgroundColor: kPrimaryColor,
-            child: Text('$number', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+            child: Text('$number', style: const TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold)),
           ),
-          const SizedBox(width: 10),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 16, color: kDarkTextColor))),
+          const SizedBox(width: 15),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 16, color: Colors.grey))),
         ],
       ),
     );
   }
 
   Widget _buildActionButton({required String label, required VoidCallback? onPressed, required Color color}) {
-    // ... (ปุ่มเหมือนเดิมจากหน้า Request Detail) ...
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -199,14 +178,9 @@ class TransferDetailScreen extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           padding: const EdgeInsets.symmetric(vertical: 15),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
+        child: Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
       ),
     );
   }

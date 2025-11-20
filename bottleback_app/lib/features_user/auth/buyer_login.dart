@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// **ต้องมีไฟล์ BuyerRegisterScreen.dart อยู่ในโฟลเดอร์เดียวกัน**
 import 'buyer_register.dart'; 
 import '../buyer/buyer_dashboard.dart'; 
 
-// --- Constants (ใช้สีเดียวกันกับโปรเจกต์) ---
-const Color kPrimaryColor = Color(0xFF00BFA5); 
-const Color kBackgroundColor = Color(0xFFB2F5E6); 
-const Color kDarkTextColor = Colors.black87;
+// --- Dark Theme Constants ---
+const Color kBackgroundColor = Color(0xFF121212);
+const Color kSurfaceColor = Color(0xFF1E1E1E);
+const Color kPrimaryColor = Color(0xFF00BFA5);
+const Color kWhiteText = Colors.white;
+const Color kGreyText = Colors.grey;
+const Color kInputFillColor = Color(0xFF2C2C2C);
 
 class BuyerLoginScreen extends StatefulWidget {
   const BuyerLoginScreen({Key? key}) : super(key: key);
@@ -22,23 +24,18 @@ class _BuyerLoginScreenState extends State<BuyerLoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   
   bool _isLoading = false;
-  // **ส่วนที่เพิ่มเข้ามา:** สำหรับควบคุมการแสดง/ซ่อนรหัสผ่าน
   bool _obscurePassword = true; 
 
   Future<void> _login() async {
     if (_formKey.currentState?.validate() ?? false) {
-      setState(() {
-        _isLoading = true;
-      });
+      setState(() => _isLoading = true);
       try {
-        // *** โค้ดจริงสำหรับการล็อกอินด้วย Firebase ***
         await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
 
         if (mounted) {
-          // หากล็อกอินสำเร็จ ให้นำทางไปยัง BuyerDashboard
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const BuyerDashboard()),
             (Route<dynamic> route) => false,
@@ -47,18 +44,11 @@ class _BuyerLoginScreenState extends State<BuyerLoginScreen> {
       } on FirebaseAuthException catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Login Failed: ${e.message ?? "Unknown error"}'),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text('Login Failed: ${e.message}'), backgroundColor: Colors.redAccent),
           );
         }
       } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        if (mounted) setState(() => _isLoading = false);
       }
     }
   }
@@ -73,149 +63,92 @@ class _BuyerLoginScreenState extends State<BuyerLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // ใช้ Container ที่มี Gradient Background เหมือน RoleSelect/Seller Login
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white,
-              kBackgroundColor.withOpacity(0.3),
-              Colors.white,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    // Icon
-                    const Icon(
-                      Icons.shopping_cart_outlined, 
-                      size: 80,
-                      color: kPrimaryColor,
+      backgroundColor: kBackgroundColor,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  // Icon Logo
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: kSurfaceColor,
+                      boxShadow: [BoxShadow(color: kPrimaryColor.withOpacity(0.2), blurRadius: 20)],
                     ),
-                    const SizedBox(height: 10),
+                    child: const Icon(Icons.shopping_cart_rounded, size: 60, color: kPrimaryColor),
+                  ),
+                  const SizedBox(height: 30),
 
-                    // Title
-                    const Text(
-                      'Buyer Login',
-                      style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: kDarkTextColor),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 50),
+                  // Title
+                  const Text(
+                    'Welcome Back!',
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: kWhiteText),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Login to continue as Buyer',
+                    style: TextStyle(fontSize: 16, color: kGreyText),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 50),
 
-                    // Email Field
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: _buildInputDecoration('Email', Icons.email),
-                      validator: (value) {
-                        if (value == null || value.isEmpty || !value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
+                  // Email Field
+                  _buildTextField(
+                    controller: _emailController,
+                    label: 'Email',
+                    icon: Icons.email_rounded,
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  const SizedBox(height: 20),
 
-                    // Password Field
-                    TextFormField(
-                      controller: _passwordController,
-                      // **ใช้ _obscurePassword และเพิ่ม suffixIcon**
-                      obscureText: _obscurePassword,
-                      decoration: _buildInputDecoration('Password', Icons.lock).copyWith(
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                            color: kPrimaryColor.withOpacity(0.7),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
+                  // Password Field
+                  _buildTextField(
+                    controller: _passwordController,
+                    label: 'Password',
+                    icon: Icons.lock_rounded,
+                    isPassword: true,
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Login Button
+                  SizedBox(
+                    height: 55,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _login,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kPrimaryColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        elevation: 5,
+                        shadowColor: kPrimaryColor.withOpacity(0.4),
                       ),
-                      validator: (value) {
-                        if (value == null || value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
+                      child: _isLoading
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                          : const Text('Login', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
                     ),
-                    const SizedBox(height: 40),
+                  ),
 
-                    // Login Button
-                    SizedBox(
-                      height: 55,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _login,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kPrimaryColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          elevation: 10,
-                          shadowColor: kPrimaryColor.withOpacity(0.5),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                            : const Text(
-                                'Login',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                              ),
+                  const SizedBox(height: 30),
+
+                  // Register Link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text("New to BottleBack? ", style: TextStyle(color: kGreyText)),
+                      GestureDetector(
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const BuyerRegisterScreen())),
+                        child: const Text('Register now', style: TextStyle(color: kPrimaryColor, fontWeight: FontWeight.bold)),
                       ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // **ลิงก์ลงทะเบียน (ปรับให้เหมือน Seller Login)**
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          "If you're new to BottleBack, ",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            // นำทางไปหน้า Buyer Register
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const BuyerRegisterScreen(), 
-                              ),
-                            );
-                          },
-                          child: const Text(
-                            'register now',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: kPrimaryColor, 
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -224,26 +157,39 @@ class _BuyerLoginScreenState extends State<BuyerLoginScreen> {
     );
   }
 
-  InputDecoration _buildInputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, color: kPrimaryColor.withOpacity(0.7)),
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: BorderSide.none,
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool isPassword = false,
+    TextInputType? keyboardType,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: isPassword ? _obscurePassword : false,
+      keyboardType: keyboardType,
+      style: const TextStyle(color: kWhiteText),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: kGreyText),
+        prefixIcon: Icon(icon, color: kPrimaryColor),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: kGreyText),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              )
+            : null,
+        filled: true,
+        fillColor: kInputFillColor,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: kPrimaryColor, width: 1.5)),
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: BorderSide(color: kPrimaryColor.withOpacity(0.2), width: 1),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: const BorderSide(color: kPrimaryColor, width: 2),
-      ),
-      labelStyle: const TextStyle(color: Colors.black54),
+      validator: (value) {
+        if (value == null || value.isEmpty) return 'Please enter $label';
+        if (label == 'Email' && !value.contains('@')) return 'Invalid email';
+        if (isPassword && value.length < 6) return 'Password too short';
+        return null;
+      },
     );
   }
 }

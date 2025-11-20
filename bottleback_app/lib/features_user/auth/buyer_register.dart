@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// ต้อง import หน้า Login กลับเข้ามา
 import 'buyer_login.dart'; 
 
-// --- Constants (ใช้สีเดียวกันกับโปรเจกต์) ---
-const Color kPrimaryColor = Color(0xFF00BFA5); 
-const Color kBackgroundColor = Color(0xFFB2F5E6); 
-const Color kDarkTextColor = Colors.black87;
+// --- Dark Theme Constants ---
+const Color kBackgroundColor = Color(0xFF121212);
+const Color kSurfaceColor = Color(0xFF1E1E1E);
+const Color kPrimaryColor = Color(0xFF00BFA5);
+const Color kWhiteText = Colors.white;
+const Color kGreyText = Colors.grey;
+const Color kInputFillColor = Color(0xFF2C2C2C);
 
 class BuyerRegisterScreen extends StatefulWidget {
   const BuyerRegisterScreen({Key? key}) : super(key: key);
@@ -18,39 +20,26 @@ class BuyerRegisterScreen extends StatefulWidget {
 
 class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
-
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password and Confirm Password must match.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      // 1. ลงทะเบียนด้วย Firebase Authentication
       final UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
@@ -58,7 +47,6 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
 
       final user = userCredential.user;
       if (user != null) {
-        // 2. บันทึกข้อมูล Buyer ลง Firestore
         await FirebaseFirestore.instance.collection('buyers').doc(user.uid).set({
           'uid': user.uid,
           'name': _nameController.text.trim(),
@@ -70,236 +58,82 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
       }
 
       if (mounted) {
-        // 3. แสดงข้อความสำเร็จและนำทางไปหน้า Login
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Registration Successful! Please log in.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const BuyerLoginScreen(),
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Registration Successful!'), backgroundColor: kPrimaryColor));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const BuyerLoginScreen()));
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Registration Failed: ${e.message ?? "Unknown error"}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.message}'), backgroundColor: Colors.redAccent));
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white,
-              kBackgroundColor.withOpacity(0.3),
-              Colors.white,
-            ],
-          ),
+      backgroundColor: kBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: kBackgroundColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kWhiteText),
+          onPressed: () => Navigator.pop(context),
         ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    // Icon
-                    const Icon(
-                      Icons.person_add_alt_1, // Icon การลงทะเบียน
-                      size: 80,
-                      color: kPrimaryColor,
-                    ),
-                    const SizedBox(height: 10),
+      ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  const Text('Create Account', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: kWhiteText), textAlign: TextAlign.center),
+                  const SizedBox(height: 10),
+                  const Text('Join BottleBack as a Buyer', style: TextStyle(fontSize: 16, color: kGreyText), textAlign: TextAlign.center),
+                  const SizedBox(height: 40),
 
-                    // Title
-                    const Text(
-                      'Buyer Register',
-                      style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: kDarkTextColor),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 50),
+                  _buildTextField(controller: _nameController, label: 'Full Name', icon: Icons.person_rounded),
+                  const SizedBox(height: 20),
+                  _buildTextField(controller: _emailController, label: 'Email', icon: Icons.email_rounded, keyboardType: TextInputType.emailAddress),
+                  const SizedBox(height: 20),
+                  _buildTextField(controller: _phoneController, label: 'Phone Number', icon: Icons.phone_rounded, keyboardType: TextInputType.phone),
+                  const SizedBox(height: 20),
+                  _buildTextField(controller: _passwordController, label: 'Password', icon: Icons.lock_rounded, isPassword: true, isObscure: _obscurePassword, toggleObscure: () => setState(() => _obscurePassword = !_obscurePassword)),
+                  const SizedBox(height: 20),
+                  _buildTextField(controller: _confirmPasswordController, label: 'Confirm Password', icon: Icons.lock_outline_rounded, isPassword: true, isObscure: _obscureConfirmPassword, toggleObscure: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword)),
+                  
+                  const SizedBox(height: 40),
 
-                    // Name Field
-                    TextFormField(
-                      controller: _nameController,
-                      keyboardType: TextInputType.text,
-                      decoration: _buildInputDecoration('Name', Icons.person),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your name';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Email Field
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: _buildInputDecoration('Email', Icons.email),
-                      validator: (value) {
-                        if (value == null || value.isEmpty || !value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    // Phone Field
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: _buildInputDecoration('Phone Number', Icons.phone),
-                      validator: (value) {
-                        if (value == null || value.length < 10) {
-                          return 'Please enter a valid 10-digit phone number';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Password Field
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      decoration: _buildInputDecoration('Password', Icons.lock).copyWith(
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                            color: kPrimaryColor.withOpacity(0.7),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
+                  SizedBox(
+                    height: 55,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _register,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kPrimaryColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                       ),
-                      validator: (value) {
-                        if (value == null || value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
+                      child: _isLoading
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                          : const Text('Register', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
                     ),
-                    const SizedBox(height: 20),
+                  ),
 
-                    // Confirm Password Field
-                    TextFormField(
-                      controller: _confirmPasswordController,
-                      obscureText: _obscureConfirmPassword,
-                      decoration: _buildInputDecoration('Confirm Password', Icons.lock).copyWith(
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                            color: kPrimaryColor.withOpacity(0.7),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscureConfirmPassword = !_obscureConfirmPassword;
-                            });
-                          },
-                        ),
+                  const SizedBox(height: 30),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text("Already a member? ", style: TextStyle(color: kGreyText)),
+                      GestureDetector(
+                        onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const BuyerLoginScreen())),
+                        child: const Text('Login', style: TextStyle(color: kPrimaryColor, fontWeight: FontWeight.bold)),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please confirm your password';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'Passwords do not match';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 40),
-
-                    // Register Button
-                    SizedBox(
-                      height: 55,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _register,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kPrimaryColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          elevation: 10,
-                          shadowColor: kPrimaryColor.withOpacity(0.5),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                            : const Text(
-                                'Register',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                              ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Login Link
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          "Already have an account? ",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            // นำทางกลับไปหน้า Login
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const BuyerLoginScreen(),
-                              ),
-                            );
-                          },
-                          child: const Text(
-                            'Login',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: kPrimaryColor, 
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -308,26 +142,36 @@ class _BuyerRegisterScreenState extends State<BuyerRegisterScreen> {
     );
   }
 
-  InputDecoration _buildInputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, color: kPrimaryColor.withOpacity(0.7)),
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: BorderSide.none,
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool isPassword = false,
+    bool? isObscure,
+    VoidCallback? toggleObscure,
+    TextInputType? keyboardType,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: isPassword ? (isObscure ?? true) : false,
+      keyboardType: keyboardType,
+      style: const TextStyle(color: kWhiteText),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: kGreyText),
+        prefixIcon: Icon(icon, color: kPrimaryColor),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(isObscure! ? Icons.visibility_off : Icons.visibility, color: kGreyText),
+                onPressed: toggleObscure,
+              )
+            : null,
+        filled: true,
+        fillColor: kInputFillColor,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: kPrimaryColor, width: 1.5)),
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: BorderSide(color: kPrimaryColor.withOpacity(0.2), width: 1),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: const BorderSide(color: kPrimaryColor, width: 2),
-      ),
-      labelStyle: const TextStyle(color: Colors.black54),
+      validator: (value) => value == null || value.isEmpty ? 'Required' : null,
     );
   }
 }
