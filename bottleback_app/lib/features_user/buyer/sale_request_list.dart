@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart'; 
-// import 'request_detail_screen.dart'; // ต้อง import หน้าจอรายละเอียด (สำหรับ Seller)
+import 'package:firebase_auth/firebase_auth.dart'; 
+import '../seller/history_detail.dart'; // <<< ต้องมีไฟล์นี้อยู่ (ชื่อ HistoryDetailScreen)
 
-// --- Constants ---
-const Color kBackgroundColor = Color(0xFFB2F5E6);
-const Color kPrimaryColor = Color(0xFF00BFA5);
+// --- Dark Theme Constants (อ้างอิงจากไฟล์ Seller อื่นๆ) ---
+const Color kBackgroundColor = Color(0xFF121212); 
+const Color kSurfaceColor = Color(0xFF1E1E1E);    
+const Color kPrimaryColor = Color(0xFF00BFA5);    
+const Color kWhiteText = Colors.white;           
+const Color kGreyText = Colors.white70;
 
 class SalesHistoryScreen extends StatelessWidget {
   const SalesHistoryScreen({Key? key}) : super(key: key);
@@ -22,52 +25,31 @@ class SalesHistoryScreen extends StatelessWidget {
         elevation: 0,
         title: const Text(
           'Sale Requests History',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kWhiteText), // White text
         ),
         automaticallyImplyLeading: false, 
       ),
       body: user == null
-          ? const Center(child: Text('Please log in to view history.'))
+          ? const Center(child: Text('Please log in to view history.', style: TextStyle(color: kGreyText)))
           : StreamBuilder<QuerySnapshot>(
-              // *** ดึงข้อมูลจาก collection 'sale_requests' ที่มี sellerId ตรงกับ user ปัจจุบัน ***
+              // FIX: กรองด้วย sellerId เพื่อให้ Security Rules อนุญาตและแสดงเฉพาะประวัติของตัวเอง
               stream: FirebaseFirestore.instance
                   .collection('sale_requests')
-                  .where('sellerId', isEqualTo: user.uid)
+                  .where('sellerId', isEqualTo: user.uid) 
                   .orderBy('timestamp', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('No sale requests found.'));
-                }
+                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
+                if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return Center(child: Text('No sale requests found.', style: TextStyle(color: kGreyText)));
 
                 return ListView.builder(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(20),
                   itemCount: snapshot.data!.docs.length,
                   itemBuilder: (context, index) {
                     final doc = snapshot.data!.docs[index];
                     final data = doc.data() as Map<String, dynamic>;
-                    
-                    final money = (data['totalMoney'] ?? 0.0).toDouble();
-                    final timestamp = data['timestamp'] as Timestamp?;
-                    final status = data['status'] as String? ?? 'Unknown';
-
-                    return _buildSaleHistoryCard(
-                      context,
-                      requestId: doc.id,
-                      money: money,
-                      timestamp: timestamp,
-                      status: status, // ส่งสถานะไปแสดง
-                    );
+                    return _buildHistoryItem(context, doc.id, data);
                   },
                 );
               },
@@ -75,114 +57,83 @@ class SalesHistoryScreen extends StatelessWidget {
     );
   }
 
-  // Widget สำหรับกำหนดสีและไอคอนตามสถานะ
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Completed':
-        return Colors.green.shade600; // ขายสำเร็จ
-      case 'Rejected':
-        return Colors.red.shade600; // ปฏิเสธการขาย
-      case 'Pending':
-      default:
-        return Colors.blue.shade600; // ระหว่างดำเนินการ
-    }
-  }
+  Widget _buildHistoryItem(BuildContext context, String id, Map<String, dynamic> data) {
+    final status = data['status'] ?? 'Pending';
+    final money = (data['totalMoney'] ?? 0.0).toDouble();
+    final date = data['timestamp'] != null 
+        ? DateFormat('dd MMM, HH:mm').format((data['timestamp'] as Timestamp).toDate()) : '-';
+    final sellerName = data['sellerName'] ?? 'N/A';
+    final buyerName = data['buyerName'] ?? 'N/A';
 
-  IconData _getStatusIcon(String status) {
+    Color statusColor;
+    Color statusBg;
+    IconData statusIcon;
     switch (status) {
-      case 'Completed':
-        return Icons.check_circle_outline;
-      case 'Rejected':
-        return Icons.cancel_outlined;
-      case 'Pending':
-      default:
-        return Icons.hourglass_top_outlined;
+      case 'Completed': statusColor = Colors.green.shade500; statusBg = Colors.green.shade900.withOpacity(0.3); statusIcon = Icons.check_circle_rounded; break;
+      case 'Rejected': statusColor = Colors.red.shade400; statusBg = Colors.red.shade900.withOpacity(0.3); statusIcon = Icons.cancel_rounded; break;
+      case 'Paid': statusColor = Colors.blue.shade400; statusBg = Colors.blue.shade900.withOpacity(0.3); statusIcon = Icons.paid_rounded; break;
+      case 'In Progress': statusColor = Colors.purple.shade400; statusBg = Colors.purple.shade900.withOpacity(0.3); statusIcon = Icons.cached_rounded; break;
+      default: statusColor = kPrimaryColor; statusBg = kPrimaryColor.withOpacity(0.3); statusIcon = Icons.hourglass_top_rounded; 
     }
-  }
-  
-  // Widget Card เพื่อแสดงสถานะ
-  Widget _buildSaleHistoryCard(
-    BuildContext context, {
-    required String requestId,
-    required double money,
-    required Timestamp? timestamp,
-    required String status,
-  }) {
-    final date = timestamp != null
-        ? DateFormat('dd MMM yyyy, HH:mm').format(timestamp.toDate())
-        : 'N/A';
-    
-    final statusColor = _getStatusColor(status);
-    final statusIcon = _getStatusIcon(status);
-    // แปลงสถานะเป็นภาษาไทย
-    final statusText = status == 'Completed' ? 'ขายสำเร็จ' : status == 'Rejected' ? 'ปฏิเสธการขาย' : 'ระหว่างดำเนินการ';
 
-    return GestureDetector(
+    return GestureDetector( // <<< FIX 2: เพิ่ม GestureDetector
       onTap: () {
-        // *** TODO: นำทางไปยังหน้ารายละเอียด RequestDetailScreen ***
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(
-        //     builder: (context) => RequestDetailScreen(requestId: requestId), 
-        //   ),
-        // );
-        // หมายเหตุ: หน้าจอ RequestDetailScreen ที่ให้ไปก่อนหน้าถูกออกแบบมาสำหรับ Buyer
-        // แต่ Seller สามารถใช้หน้าจอที่คล้ายกันเพื่อดูรายละเอียดได้ (โดยไม่ต้องมีปุ่ม Confirm/Reject)
-      },
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 15),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        elevation: 3,
-        child: Padding(
-          padding: const EdgeInsets.all(15.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(statusIcon, color: statusColor, size: 30),
-                  const SizedBox(width: 15),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        statusText, // แสดงสถานะ
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: statusColor,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        date,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              
-              // ยอดเงินที่ขายได้
-              Row(
-                children: [
-                  Text(
-                    '+ ฿ ${money.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: statusColor, 
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-                ],
-              ),
-            ],
+        // นำทางไปหน้าจอรายละเอียดประวัติการขาย (สำหรับ Seller)
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (ctx) => HistoryDetailScreen(historyId: id), // ส่ง Document ID ไป
           ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 15),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: kSurfaceColor, 
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 3))], 
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(statusIcon, color: statusColor, size: 28),
+                const SizedBox(width: 15),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Request to $buyerName', 
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: kWhiteText), 
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      date,
+                      style: const TextStyle(fontSize: 12, color: kGreyText), 
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            
+            // ยอดเงินที่ขายได้
+            Row(
+              children: [
+                Text(
+                  '+ ฿ ${money.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: statusColor,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.arrow_forward_ios, size: 16, color: kGreyText), 
+              ],
+            ),
+          ],
         ),
       ),
     );

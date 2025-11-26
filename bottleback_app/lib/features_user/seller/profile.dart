@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-const Color kBackgroundColor = Color(0xFF121212);
-const Color kSurfaceColor = Color(0xFF1E1E1E);
-const Color kPrimaryColor = Color(0xFF00BFA5);
-const Color kWhiteText = Colors.white;
+// --- Light Theme Constants ---
+const Color kBackgroundColor = Color(0xFFF5F5F5); 
+const Color kSurfaceColor = Colors.white;          
+const Color kPrimaryColor = Color(0xFF00796B);    
+const Color kSecondaryColor = Color(0xFF80CBC4);  
+const Color kBlackText = Colors.black87;           
+const Color kGreyText = Colors.black54;            
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -45,21 +48,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      backgroundColor: kBackgroundColor, // Light background
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
               const SizedBox(height: 20),
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 50,
-                backgroundColor: kSurfaceColor,
-                child: Icon(Icons.person, size: 50, color: Colors.grey),
+                backgroundColor: kSecondaryColor.withOpacity(0.3), // Light accent background
+                child: Icon(Icons.person, size: 50, color: kPrimaryColor), // Primary color icon
               ),
               const SizedBox(height: 15),
-              Text(_name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kWhiteText)),
-              const Text('Seller Account', style: TextStyle(color: Colors.grey)),
+              Text(_name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kBlackText)), // Dark text
+              Text('Seller Account', style: TextStyle(color: kGreyText)), // Dark grey text
               const SizedBox(height: 40),
 
               _buildSectionHeader('Contact Info'),
@@ -76,8 +79,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 height: 55,
                 child: TextButton.icon(
                   onPressed: () => FirebaseAuth.instance.signOut().then((_) => Navigator.of(context).pushNamedAndRemoveUntil('/', (r) => false)),
-                  icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-                  label: const Text('Sign Out', style: TextStyle(color: Colors.redAccent, fontSize: 16, fontWeight: FontWeight.bold)),
+                  icon: const Icon(Icons.logout_rounded, color: Colors.red), // Red icon
+                  label: const Text('Sign Out', style: TextStyle(color: Colors.red, fontSize: 16, fontWeight: FontWeight.bold)),
                   style: TextButton.styleFrom(
                     backgroundColor: Colors.red.withOpacity(0.1),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -94,7 +97,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10, left: 5),
-      child: Align(alignment: Alignment.centerLeft, child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey))),
+      child: Align(alignment: Alignment.centerLeft, child: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: kGreyText))), // Dark grey text
     );
   }
 
@@ -102,14 +105,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: kSurfaceColor, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(color: kSurfaceColor, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]), // White card, subtle shadow
       child: Row(
         children: [
           Icon(icon, color: kPrimaryColor, size: 20),
           const SizedBox(width: 15),
-          Text(title, style: const TextStyle(color: Colors.grey)),
+          Text(title, style: TextStyle(color: kGreyText)), // Dark grey text
           const Spacer(),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, color: kWhiteText)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, color: kBlackText)), // Dark text
         ],
       ),
     );

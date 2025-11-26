@@ -5,13 +5,13 @@ import 'bottle_count.dart';
 import 'sales_history.dart'; 
 import 'profile.dart'; 
 
-// --- Dark Theme Constants ---
-const Color kBackgroundColor = Color(0xFF121212); // พื้นหลังดำสนิท
-const Color kSurfaceColor = Color(0xFF1E1E1E);    // สี Card เทาเข้ม
-const Color kPrimaryColor = Color(0xFF00BFA5);    // สีเขียว Mint (เหมือนเดิม แต่เด่นขึ้นในธีมมืด)
-const Color kSecondaryColor = Color(0xFF2C2C2C);  // สีประกอบ
-const Color kWhiteText = Colors.white;
-const Color kGreyText = Colors.white70;
+// --- Light Theme Constants ---
+const Color kBackgroundColor = Color(0xFFF5F5F5); // พื้นหลังสว่างมาก (เกือบขาว)
+const Color kSurfaceColor = Colors.white;          // สี Card, Nav Bar (ขาว)
+const Color kPrimaryColor = Color(0xFF00796B);    // สีเขียวเข้ม (Dark Teal)
+const Color kSecondaryColor = Color(0xFF80CBC4);  // สีเขียวอ่อน (Light Teal)
+const Color kBlackText = Colors.black87;           // สีตัวอักษรเข้ม
+const Color kGreyText = Colors.black54;            // สีตัวอักษรรอง
 
 class SellerDashboard extends StatefulWidget {
   const SellerDashboard({Key? key}) : super(key: key);
@@ -33,19 +33,19 @@ class _SellerDashboardState extends State<SellerDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      backgroundColor: kBackgroundColor, // Light background
       body: _screens[_currentIndex], 
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: kSurfaceColor,
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 10, offset: const Offset(0, -5))],
+          color: kSurfaceColor, // Nav Bar background white
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, -2))], // Subtle shadow
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
           selectedItemColor: kPrimaryColor,
-          unselectedItemColor: Colors.grey,
-          backgroundColor: kSurfaceColor, // พื้นหลัง Nav Bar สีเข้ม
+          unselectedItemColor: kGreyText, // Darker grey for light theme
+          backgroundColor: kSurfaceColor,
           elevation: 0,
           type: BottomNavigationBarType.fixed,
           showUnselectedLabels: true,
@@ -102,18 +102,18 @@ class _DashboardHomeState extends State<DashboardHome> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: kSurfaceColor, // Dialog สีเข้ม
+          backgroundColor: kSurfaceColor, // Dialog สีขาว
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Confirm Sale Request', style: TextStyle(fontWeight: FontWeight.bold, color: kWhiteText)),
+          title: Text('Confirm Sale Request', style: TextStyle(fontWeight: FontWeight.bold, color: kBlackText)), // Dark text
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
                 decoration: BoxDecoration(
-                  color: Colors.black26,
+                  color: kPrimaryColor.withOpacity(0.1), // Light background
                   borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: kPrimaryColor.withOpacity(0.3))
+                  border: Border.all(color: kPrimaryColor.withOpacity(0.5))
                 ),
                 child: Text(
                   '฿ ${totalMoney.toStringAsFixed(2)}',
@@ -121,13 +121,13 @@ class _DashboardHomeState extends State<DashboardHome> {
                 ),
               ),
               const SizedBox(height: 15),
-              const Text('Sending this request will reset your current inventory to zero.', textAlign: TextAlign.center, style: TextStyle(color: kGreyText)),
+              Text('Sending this request will reset your current inventory to zero.', textAlign: TextAlign.center, style: TextStyle(color: kGreyText)), // Dark grey text
             ],
           ),
           actionsPadding: const EdgeInsets.all(20),
           actions: <Widget>[
             TextButton(
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              child: Text('Cancel', style: TextStyle(color: kGreyText)),
               onPressed: () => Navigator.of(context).pop(),
             ),
             ElevatedButton(
@@ -164,15 +164,15 @@ class _DashboardHomeState extends State<DashboardHome> {
                 });
                 if (context.mounted) {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Success! Request sent.'), backgroundColor: kPrimaryColor));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Success! Request sent.'), backgroundColor: kPrimaryColor));
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: kPrimaryColor,
+                backgroundColor: kPrimaryColor, // Primary color button
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
               ),
-              child: const Text('Confirm', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              child: const Text('Confirm', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), // White text on dark teal
             ),
           ],
         );
@@ -186,13 +186,13 @@ class _DashboardHomeState extends State<DashboardHome> {
     if (user == null || _isLoading) return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
 
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      backgroundColor: kBackgroundColor, // Light background
       body: SafeArea( 
         child: StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance.collection('sellers').doc(user.uid).snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
-            if (!snapshot.hasData || !snapshot.data!.exists) return const Center(child: Text('No Data Found', style: TextStyle(color: Colors.white)));
+            if (!snapshot.hasData || !snapshot.data!.exists) return const Center(child: Text('No Data Found', style: TextStyle(color: kBlackText))); 
             
             final data = snapshot.data!.data() as Map<String, dynamic>;
             final totalWeight = (data['totalWeight'] ?? 0.0).toDouble();
@@ -209,17 +209,17 @@ class _DashboardHomeState extends State<DashboardHome> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Welcome back,', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                          Text(_userName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kWhiteText)),
+                          Text('Welcome back,', style: TextStyle(fontSize: 16, color: kGreyText)), 
+                          Text(_userName, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kBlackText)), 
                         ],
                       ),
-                      CircleAvatar(radius: 24, backgroundColor: kSecondaryColor, child: const Icon(Icons.person, color: kPrimaryColor)),
+                      CircleAvatar(radius: 24, backgroundColor: kSecondaryColor.withOpacity(0.3), child: Icon(Icons.person, color: kPrimaryColor)), 
                     ],
                   ),
                   const SizedBox(height: 30),
                   _buildSummaryBox(totalMoney, totalWeight),
                   const SizedBox(height: 25),
-                  const Text('Current Inventory', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kWhiteText)),
+                  Text('Current Inventory', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kBlackText)), 
                   const SizedBox(height: 15),
                   _buildInventoryList(data),
                   const SizedBox(height: 30),
@@ -238,28 +238,24 @@ class _DashboardHomeState extends State<DashboardHome> {
       width: double.infinity,
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF004D40), kPrimaryColor], // Darker Green Gradient
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: kPrimaryColor, // Solid Primary color background
         borderRadius: BorderRadius.circular(25),
-        boxShadow: [BoxShadow(color: kPrimaryColor.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 8))],
+        boxShadow: [BoxShadow(color: kPrimaryColor.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('Estimated Value', style: TextStyle(color: Colors.white70, fontSize: 14)),
           const SizedBox(height: 5),
-          Text('฿ ${totalMoney.toStringAsFixed(2)}', style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text('฿ ${totalMoney.toStringAsFixed(2)}', style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white)), // White text
           const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(12)), // Light background
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.scale_rounded, color: Colors.white70, size: 18),
+                const Icon(Icons.scale_rounded, color: Colors.white, size: 18),
                 const SizedBox(width: 8),
                 Text('Total Weight: ${totalWeight.toStringAsFixed(2)} kg', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
               ],
@@ -273,9 +269,9 @@ class _DashboardHomeState extends State<DashboardHome> {
   Widget _buildInventoryList(Map<String, dynamic> data) {
     return Column(
       children: [
-        _buildInventoryItem('PET Bottles', data['petCount']??0, Icons.water_drop_rounded, Colors.blueAccent),
-        _buildInventoryItem('HDPE Bottles', data['hdpeCount']??0, Icons.recycling_rounded, Colors.greenAccent),
-        _buildInventoryItem('Aluminum Cans', data['canCount']??0, Icons.sports_bar_rounded, Colors.redAccent),
+        _buildInventoryItem('PET Bottles', data['petCount']??0, Icons.water_drop_rounded, Colors.blue), 
+        _buildInventoryItem('HDPE Bottles', data['hdpeCount']??0, Icons.recycling_rounded, Colors.green),
+        _buildInventoryItem('Aluminum Cans', data['canCount']??0, Icons.sports_bar_rounded, Colors.deepOrange),
       ],
     );
   }
@@ -284,7 +280,10 @@ class _DashboardHomeState extends State<DashboardHome> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: kSurfaceColor, borderRadius: BorderRadius.circular(16), // สี Card เข้ม
+      decoration: BoxDecoration(
+        color: kSurfaceColor, // White card
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))] // Subtle shadow
       ),
       child: Row(
         children: [
@@ -295,9 +294,9 @@ class _DashboardHomeState extends State<DashboardHome> {
           ),
           const SizedBox(width: 16),
           Expanded(
-            child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: kWhiteText)),
+            child: Text(title, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: kBlackText)), // Dark text
           ),
-          Text('$count units', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: kGreyText)),
+          Text('$count units', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: kPrimaryColor)), // Primary color number
         ],
       ),
     );
@@ -311,8 +310,8 @@ class _DashboardHomeState extends State<DashboardHome> {
       child: ElevatedButton(
         onPressed: isEnabled ? () => _showConfirmSaleDialog(totalMoney) : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: kWhiteText, // ปุ่มสีขาว ตัดกับพื้นหลังดำ
-          foregroundColor: Colors.black, // ตัวหนังสือสีดำ
+          backgroundColor: kPrimaryColor, // Dark Teal button
+          foregroundColor: Colors.white, // White text
           elevation: isEnabled ? 5 : 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),

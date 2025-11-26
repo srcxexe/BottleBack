@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'buyer_home.dart'; 
 import 'buyer_profile.dart'; 
 
-// --- Dark Theme Constants ---
-const Color kBackgroundColor = Color(0xFF121212);
-const Color kSurfaceColor = Color(0xFF1E1E1E);
-const Color kPrimaryColor = Color(0xFF00BFA5);
+// --- Light Theme Constants ---
+const Color kBackgroundColor = Color(0xFFF5F5F5); 
+const Color kSurfaceColor = Colors.white;          
+const Color kPrimaryColor = Color(0xFF00796B);    
+const Color kSecondaryColor = Color(0xFF80CBC4);  
+const Color kBlackText = Colors.black87;           
+const Color kGreyText = Colors.black54;            
 
 class BuyerDashboard extends StatefulWidget {
   const BuyerDashboard({Key? key}) : super(key: key);
@@ -18,8 +21,8 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
   int _currentIndex = 0;
   
   final List<Widget> _screens = [
-    const BuyerHomeScreen(),     
-    const BuyerProfileScreen(),  
+    const BuyerHomeScreen(),     // Index 0: Sale Requests List
+    const BuyerProfileScreen(),  // Index 1: Profile
   ];
 
   void _onItemTapped(int index) {
@@ -31,29 +34,30 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      backgroundColor: kBackgroundColor, // Light background
       body: _screens[_currentIndex], 
       
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: kSurfaceColor,
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 10, offset: const Offset(0, -5))],
+          color: kSurfaceColor, // White Nav Bar background
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, -2))], // Subtle shadow
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: _onItemTapped,
-          selectedItemColor: kPrimaryColor,
-          unselectedItemColor: Colors.grey,
-          backgroundColor: kSurfaceColor, // พื้นหลังสีเข้ม
+          selectedItemColor: kPrimaryColor, // Primary color selected
+          unselectedItemColor: kGreyText,    // Dark grey unselected
+          backgroundColor: kSurfaceColor, 
           type: BottomNavigationBarType.fixed,
           elevation: 0,
+          showUnselectedLabels: false,
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.list_alt_rounded),
               label: 'Requests',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.person),
+              icon: Icon(Icons.person_rounded),
               label: 'Profile',
             ),
           ],
