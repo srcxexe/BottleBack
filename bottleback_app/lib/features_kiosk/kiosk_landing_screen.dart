@@ -1,26 +1,29 @@
 import 'package:flutter/material.dart';
-// ต้อง import หน้าจอหลักเพื่อนำทางไปหลังจากกดเริ่มต้น
-import 'kiosk_main_screen.dart'; 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'kiosk_main_screen.dart';
+import 'kiosk_login_screen.dart';
 
-// --- Light Theme Constants (คัดลอกมาจากไฟล์อื่นๆ เพื่อให้สามารถใช้งานได้) ---
-// ในโปรเจกต์จริง คุณควรพิจารณาเก็บค่าคงที่เหล่านี้ไว้ในไฟล์ constants กลาง
-const Color kBackgroundColor = Color(0xFFF5F5F5); 
-const Color kPrimaryColor = Color(0xFF80CBC4);    
-const Color kBlackText = Colors.black87;           
+// --- Theme Constants ---
+const Color kBackgroundColor = Color(0xFFF5F5F5);
+const Color kPrimaryColor = Color(0xFF00796B);
+const Color kBlackText = Colors.black87;
 
 class KioskLandingScreen extends StatelessWidget {
   const KioskLandingScreen({super.key});
 
-  // ฟังก์ชันสำหรับนำทางไปยังหน้าจอหลัก
-  void _navigateToMainScreen(BuildContext context) {
-    // ใช้ pushReplacement เพื่อไม่ให้ผู้ใช้สามารถกดปุ่มย้อนกลับจาก KioskMainScreen 
-    // กลับมาที่หน้า Landing Page ได้
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const KioskMainScreen(),
-      ),
-    );
+  void _handleStart(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const KioskMainScreen()),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const KioskLoginScreen()),
+      );
+    }
   }
 
   @override
@@ -29,75 +32,63 @@ class KioskLandingScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: kBackgroundColor,
-      // ใช้ InkWell ครอบทั้ง body เพื่อให้ผู้ใช้สามารถแตะที่ไหนก็ได้บนหน้าจอเพื่อเริ่ม
       body: InkWell(
-        onTap: () => _navigateToMainScreen(context), 
+        onTap: () => _handleStart(context),
         child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(50.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Kiosk Logo/Icon Section
-                const Icon(
-                  Icons.recycling_rounded, // ไอคอนรีไซเคิล
-                  size: 150,
-                  color: kPrimaryColor,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(30),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: kPrimaryColor.withOpacity(0.3),
+                      blurRadius: 30,
+                      spreadRadius: 10,
+                    )
+                  ],
                 ),
-                const SizedBox(height: 20),
-                
-                // Title
-                Text(
-                  'Welcome to The BottleBack',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    color: kPrimaryColor,
+                child: const Icon(Icons.recycling, size: 100, color: kPrimaryColor),
+              ),
+              const SizedBox(height: 50),
+              const Text(
+                'Welcome to BottleBack Kiosk',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: kBlackText,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Touch anywhere to start recycling',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: kBlackText.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(height: 80),
+              SizedBox(
+                width: size.width * 0.4,
+                height: 70,
+                child: ElevatedButton.icon(
+                  onPressed: () => _handleStart(context),
+                  icon: const Icon(Icons.touch_app, color: Colors.white, size: 30),
+                  label: const Text(
+                    'START',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-                
-                // Subtitle/Instruction
-                Text(
-                  'Press START or Touch Anywhere to begin',
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: kBlackText.withOpacity(0.7),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                
-                const SizedBox(height: 80),
-
-                // START Button (ขนาดใหญ่พิเศษ)
-                SizedBox(
-                  width: size.width * 0.5, // กำหนดความกว้างของปุ่ม
-                  height: 80,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _navigateToMainScreen(context),
-                    icon: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 35),
-                    label: const Text(
-                      'START',
-                      style: TextStyle(
-                        fontSize: 30, 
-                        fontWeight: FontWeight.bold, 
-                        color: Colors.white,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      elevation: 8,
-                    ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kPrimaryColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    elevation: 5,
                   ),
                 ),
-                const SizedBox(height: 80),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

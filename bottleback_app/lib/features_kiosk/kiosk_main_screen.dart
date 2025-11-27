@@ -1,41 +1,39 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; 
-import 'package:firebase_auth/firebase_auth.dart'; // FIX 1: Import Firebase Auth
+import 'package:firebase_auth/firebase_auth.dart';
 import 'kiosk_summary_screen.dart';
+import 'kiosk_login_screen.dart'; // Import หน้า Login เผื่อต้องเด้งกลับ
 
 // --- Light Theme Constants ---
 const Color kBackgroundColor = Color(0xFFF5F5F5); 
 const Color kSurfaceColor = Colors.white;          
-const Color kPrimaryColor = Color(0xFF80CBC4);    
+const Color kPrimaryColor = Color(0xFF00796B);    
 const Color kBlackText = Colors.black87;           
 const Color kGreyText = Colors.black54;            
 
 // 1. กำหนดน้ำหนักมาตรฐานต่อหน่วย (กิโลกรัม)
 const Map<String, double> kStandardWeights = {
-  'PET': 0.035,   // ประมาณ 35 กรัมต่อขวด
-  'HDPE': 0.040,  // ประมาณ 40 กรัมต่อขวด
-  'CAN': 0.015,   // ประมาณ 15 กรัมต่อกระป๋อง
-  'GLASS': 0.200, // ประมาณ 200 กรัมต่อขวด
+  'PET': 0.035,
+  'HDPE': 0.040,
+  'CAN': 0.015,
+  'GLASS': 0.200,
 };
 
-// Data Model สำหรับบันทึกรายการขวดที่ถูกสแกน/กรอก
+// Data Model
 class KioskItem {
   final String bottleType;
   final int count;
-  final double weightKg; // Calculated property
+  final double weightKg;
   final double pricePerUnit; 
   final double subTotal;
 
-  // แก้ไข constructor ให้คำนวณ weightKg และ subTotal
   KioskItem({
     required this.bottleType,
     required this.count,
     required this.pricePerUnit,
   }) : 
-    weightKg = count * (kStandardWeights[bottleType] ?? 0.0), // ใช้ ?? 0.0 เพื่อความปลอดภัย
+    weightKg = count * (kStandardWeights[bottleType] ?? 0.0),
     subTotal = count * pricePerUnit;
 
-  // เมท็อดสำหรับแปลงเป็น Map เพื่อส่งไปยังหน้า Summary/Payment
   Map<String, dynamic> toMap() {
     return {
       'bottleType': bottleType,
@@ -47,7 +45,6 @@ class KioskItem {
   }
 }
 
-
 class KioskMainScreen extends StatefulWidget {
   const KioskMainScreen({super.key});
 
@@ -57,30 +54,37 @@ class KioskMainScreen extends StatefulWidget {
 
 class _KioskMainScreenState extends State<KioskMainScreen> {
   final List<KioskItem> _items = [];
-  final String _sellerId = FirebaseAuth.instance.currentUser?.uid ?? 'kiosk_guest_01'; // FIX 2: ใช้ Firebase Auth
+  String? _sellerId;
+  bool _isLoading = true;
 
   double get _totalMoney => _items.fold(0.0, (sum, item) => sum + item.subTotal);
   int get _totalCount => _items.fold(0, (sum, item) => sum + item.count);
   double get _totalWeight => _items.fold(0.0, (sum, item) => sum + item.weightKg);
 
-  void _addItem(KioskItem item) {
-    // รวมรายการเดียวกัน หากมีอยู่แล้ว
-    final existingIndex = _items.indexWhere((i) => i.bottleType == item.bottleType && i.pricePerUnit == item.pricePerUnit);
-    
-    if (existingIndex != -1) {
-      // Logic การรวมรายการ หากต้องการรวมจำนวนและคำนวณใหม่
-      // แต่ในตัวอย่างนี้จะใช้การเพิ่มรายการใหม่เข้าไปเลยเพื่อให้ง่ายต่อการแสดงผล
-      setState(() {
-        _items.add(item);
-      });
-    } else {
-      setState(() {
-        _items.add(item);
-      });
-    }
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
 
+  void _checkLoginStatus() {
+    // ฟังสถานะ Auth ตลอดเวลา
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (mounted) {
+        setState(() {
+          _sellerId = user?.uid;
+          _isLoading = false;
+        });
+      }
+    });
+  }
+
+  void _addItem(KioskItem item) {
+    setState(() {
+      _items.add(item);
+    });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${item.count} units of ${item.bottleType} added. Subtotal: ฿${item.subTotal.toStringAsFixed(2)}'), backgroundColor: kPrimaryColor)
+      SnackBar(content: Text('Added ${item.count} ${item.bottleType}'), duration: const Duration(seconds: 1), backgroundColor: kPrimaryColor)
     );
   }
 
@@ -91,7 +95,20 @@ class _KioskMainScreenState extends State<KioskMainScreen> {
   }
   
   void _navigateToSummary() {
-    // แปลงรายการ KioskItem เป็น Map<String, dynamic> ก่อนส่ง
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add at least one item.'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    if (_sellerId == null) {
+      // ถ้าไม่มี User ให้เด้งไปหน้า Login
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const KioskLoginScreen()));
+      return;
+    }
+
+    // แปลงข้อมูลและส่ง sellerId ไป
     final List<Map<String, dynamic>> itemsMap = _items.map((item) => item.toMap()).toList();
 
     Navigator.push(
@@ -102,22 +119,18 @@ class _KioskMainScreenState extends State<KioskMainScreen> {
           totalCount: _totalCount,
           totalWeight: _totalWeight,
           totalMoney: _totalMoney,
-          sellerId: _sellerId, // ส่ง sellerId
+          sellerId: _sellerId!, // ส่ง ID ที่ถูกต้อง
         ),
       ),
     );
   }
 
-  // Dialog สำหรับกรอกข้อมูลรายการ
+  // Dialog Add Item
   Future<void> _showAddItemDialog() async {
-    final _dialogFormKey = GlobalKey<FormState>();
-    String? _selectedType = kStandardWeights.keys.first;
-    final _countController = TextEditingController();
-    final _priceController = TextEditingController();
-
-    // กำหนดราคาเริ่มต้นตามประเภทที่เลือก (ถ้ามี)
-    // ในที่นี้เราจะให้กรอกราคาเองเพื่อความยืดหยุ่น
-    _priceController.text = ''; 
+    final dialogFormKey = GlobalKey<FormState>();
+    String? selectedType = kStandardWeights.keys.first;
+    final countController = TextEditingController();
+    final priceController = TextEditingController(text: '1.0');
 
     return showDialog<void>(
       context: context,
@@ -126,91 +139,76 @@ class _KioskMainScreenState extends State<KioskMainScreen> {
           title: const Text('Add Recyclable Item'),
           content: SingleChildScrollView(
             child: Form(
-              key: _dialogFormKey,
+              key: dialogFormKey,
               child: ListBody(
                 children: <Widget>[
-                  // Bottle Type Dropdown
                   DropdownButtonFormField<String>(
-                    decoration: _inputDecoration('Bottle Type'),
-                    value: _selectedType,
-                    items: kStandardWeights.keys.map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text('$value (Std. Weight: ${kStandardWeights[value]} kg)'),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _selectedType = newValue;
-                      });
-                    },
-                    validator: (v) => v == null ? 'Select a type' : null,
+                    decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
+                    value: selectedType,
+                    items: kStandardWeights.keys.map((String value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                    onChanged: (v) => selectedType = v,
                   ),
-                  const SizedBox(height: 15),
-
-                  // Amount (Units)
+                  const SizedBox(height: 10),
                   TextFormField(
-                    controller: _countController,
+                    controller: countController,
                     keyboardType: TextInputType.number,
-                    decoration: _inputDecoration('Amount (Units)'),
-                    validator: (v) {
-                      if (v!.isEmpty || int.tryParse(v) == null || (int.tryParse(v) ?? 0) <= 0) return 'Enter a valid number (> 0)';
-                      return null;
-                    },
+                    decoration: const InputDecoration(labelText: 'Count', border: OutlineInputBorder()),
+                    validator: (v) => v!.isEmpty ? 'Required' : null,
                   ),
-                  const SizedBox(height: 15),
-
-                  // Price Per Unit (฿)
+                  const SizedBox(height: 10),
                   TextFormField(
-                    controller: _priceController,
+                    controller: priceController,
                     keyboardType: TextInputType.number,
-                    decoration: _inputDecoration('Price Per Unit (฿)'),
-                    validator: (v) {
-                      if (v!.isEmpty || double.tryParse(v) == null) return 'Enter a valid price';
-                      return null;
-                    },
+                    decoration: const InputDecoration(labelText: 'Price/Unit', border: OutlineInputBorder()),
+                    validator: (v) => v!.isEmpty ? 'Required' : null,
                   ),
                 ],
               ),
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: kGreyText))),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () {
-                if (_dialogFormKey.currentState!.validate()) {
-                  final newItem = KioskItem(
-                    bottleType: _selectedType!,
-                    count: int.parse(_countController.text),
-                    pricePerUnit: double.parse(_priceController.text),
-                  );
-                  _addItem(newItem);
+                if (dialogFormKey.currentState!.validate()) {
+                  _addItem(KioskItem(
+                    bottleType: selectedType!,
+                    count: int.parse(countController.text),
+                    pricePerUnit: double.parse(priceController.text),
+                  ));
                   Navigator.pop(context);
                 }
-              }, 
-              style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-              child: const Text('Add Item', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+              },
+              child: const Text('Add'),
             ),
           ],
         );
       },
     );
   }
-  
-  InputDecoration _inputDecoration(String label) {
-    return InputDecoration(
-      filled: true, fillColor: kSurfaceColor, // ใช้ kSurfaceColor เป็นสีพื้นหลังใน dialog
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      labelText: label, labelStyle: const TextStyle(color: kGreyText),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+
+    if (_sellerId == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text("Please Log In"),
+              ElevatedButton(onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (c) => const KioskLoginScreen())), child: const Text("Login"))
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        title: const Text('Kiosk Recycling Station', style: TextStyle(color: kBlackText, fontWeight: FontWeight.bold)),
+        title: const Text('Kiosk Recycling', style: TextStyle(color: kBlackText, fontWeight: FontWeight.bold)),
         backgroundColor: kSurfaceColor, 
         elevation: 1,
         centerTitle: true,
@@ -218,7 +216,6 @@ class _KioskMainScreenState extends State<KioskMainScreen> {
           IconButton(
             icon: const Icon(Icons.add_circle_outline, color: kPrimaryColor),
             onPressed: _showAddItemDialog,
-            tooltip: 'Add Item Manually',
           ),
         ],
       ),
@@ -230,99 +227,50 @@ class _KioskMainScreenState extends State<KioskMainScreen> {
             child: Card(
               color: kSurfaceColor,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              elevation: 3,
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildSummaryBox('Total Units', _totalCount.toString(), Colors.blueGrey),
-                    _buildSummaryBox('Total Weight (Kg)', _totalWeight.toStringAsFixed(3), Colors.orange),
-                    _buildSummaryBox('Total Money (฿)', _totalMoney.toStringAsFixed(2), kPrimaryColor),
+                    _buildInfoColumn('Count', '$_totalCount', Colors.blueGrey),
+                    _buildInfoColumn('Weight', '${_totalWeight.toStringAsFixed(2)} kg', Colors.orange),
+                    _buildInfoColumn('Money', '฿${_totalMoney.toStringAsFixed(2)}', kPrimaryColor),
                   ],
                 ),
               ),
             ),
           ),
-
-          // Item List
+          
           Expanded(
-            child: _items.isEmpty
-                ? const Center(child: Text('No items added. Start recycling!', style: TextStyle(color: kGreyText, fontSize: 18)))
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 0),
-                    itemCount: _items.length,
-                    itemBuilder: (context, index) {
-                      final item = _items[index];
-                      return Card(
-                        color: kSurfaceColor,
-                        margin: const EdgeInsets.only(bottom: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(15.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.bottleType,
-                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kBlackText),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${item.count} units @ ฿${item.pricePerUnit.toStringAsFixed(2)}/unit',
-                                      style: const TextStyle(color: kGreyText, fontSize: 14),
-                                    ),
-                                    Text(
-                                      'Weight: ${item.weightKg.toStringAsFixed(3)} kg',
-                                      style: const TextStyle(color: kGreyText, fontSize: 14),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Text(
-                                '฿${item.subTotal.toStringAsFixed(2)}',
-                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: kPrimaryColor),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                onPressed: () {
-                                  _removeItem(index);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Item removed.'), backgroundColor: Colors.red)
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+            child: _items.isEmpty 
+              ? const Center(child: Text('No items added', style: TextStyle(color: kGreyText)))
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  itemCount: _items.length,
+                  itemBuilder: (context, index) {
+                    final item = _items[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      child: ListTile(
+                        title: Text('${item.bottleType} (${item.count})'),
+                        subtitle: Text('฿${item.subTotal.toStringAsFixed(2)}'),
+                        trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _removeItem(index)),
+                      ),
+                    );
+                  },
+                ),
           ),
 
-          // Bottom Action Bar
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
-            decoration: BoxDecoration(
-              color: kSurfaceColor,
-              boxShadow: [BoxShadow(color: const Color.fromARGB(28, 0, 0, 0), blurRadius: 10, offset: const Offset(0, -5))],
-            ),
+            padding: const EdgeInsets.all(20),
+            color: kSurfaceColor,
             child: SizedBox(
-              height: 55,
               width: double.infinity,
-              child: ElevatedButton.icon(
+              height: 55,
+              child: ElevatedButton(
                 onPressed: _items.isNotEmpty ? _navigateToSummary : null,
-                icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20),
-                label: const Text('Proceed to Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kPrimaryColor,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  elevation: 5,
-                ),
+                style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                child: const Text('Proceed to Summary', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ),
           ),
@@ -331,16 +279,10 @@ class _KioskMainScreenState extends State<KioskMainScreen> {
     );
   }
 
-  Widget _buildSummaryBox(String title, String value, Color color) {
-    return Column(
-      children: [
-        Text(title, style: const TextStyle(fontSize: 14, color: kGreyText)),
-        const SizedBox(height: 5),
-        Text(
-          value,
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
-        ),
-      ],
-    );
+  Widget _buildInfoColumn(String title, String value, Color color) {
+    return Column(children: [
+      Text(title, style: const TextStyle(fontSize: 12, color: kGreyText)),
+      Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+    ]);
   }
 }
