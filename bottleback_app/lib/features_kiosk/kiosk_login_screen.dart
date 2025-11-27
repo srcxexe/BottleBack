@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'kiosk_main_screen.dart';
 
 const Color kBackgroundColor = Color(0xFFF5F5F5);
-const Color kPrimaryColor = Color(0xFF00796B);
+const Color kPrimaryColor = Color.fromARGB(255, 118, 212, 201);
 
 class KioskLoginScreen extends StatefulWidget {
   const KioskLoginScreen({super.key});

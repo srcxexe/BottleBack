@@ -4,7 +4,7 @@ import 'kiosk_payment_screen.dart';
 // --- Light Theme Constants ---
 const Color kBackgroundColor = Color(0xFFF5F5F5); 
 const Color kSurfaceColor = Colors.white;          
-const Color kPrimaryColor = Color(0xFF00796B);    
+const Color kPrimaryColor = Color.fromARGB(255, 118, 212, 201);  
 const Color kBlackText = Colors.black87;           
 const Color kGreyText = Colors.black54;            
 

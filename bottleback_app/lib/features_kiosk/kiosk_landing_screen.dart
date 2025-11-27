@@ -5,7 +5,7 @@ import 'kiosk_login_screen.dart';
 
 // --- Theme Constants ---
 const Color kBackgroundColor = Color(0xFFF5F5F5);
-const Color kPrimaryColor = Color(0xFF00796B);
+const Color kPrimaryColor = Color.fromARGB(255, 174, 236, 218);
 const Color kBlackText = Colors.black87;
 
 class KioskLandingScreen extends StatelessWidget {
@@ -55,7 +55,7 @@ class KioskLandingScreen extends StatelessWidget {
               ),
               const SizedBox(height: 50),
               const Text(
-                'Welcome to BottleBack Kiosk',
+                'Welcome to BottleBack',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -64,7 +64,7 @@ class KioskLandingScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                'Touch anywhere to start recycling',
+                'Touch anywhere to start process',
                 style: TextStyle(
                   fontSize: 18,
                   color: kBlackText.withOpacity(0.6),
