@@ -6,12 +6,11 @@ import 'sales_history.dart';
 import 'profile.dart'; 
 
 // --- Light Theme Constants ---
-const Color kBackgroundColor = Color(0xFFF5F5F5); // พื้นหลังสว่างมาก (เกือบขาว)
-const Color kSurfaceColor = Colors.white;          // สี Card, Nav Bar (ขาว)
-const Color kPrimaryColor = Color(0xFF00796B);    // สีเขียวเข้ม (Dark Teal)
-const Color kSecondaryColor = Color(0xFF80CBC4);  // สีเขียวอ่อน (Light Teal)
-const Color kBlackText = Colors.black87;           // สีตัวอักษรเข้ม
-const Color kGreyText = Colors.black54;            // สีตัวอักษรรอง
+const Color kBackgroundColor = Color(0xFFF5F5F5);
+const Color kSurfaceColor = Colors.white;
+const Color kPrimaryColor = Color(0xFF00796B);
+const Color kBlackText = Colors.black87;
+const Color kGreyText = Colors.black54;
 
 class SellerDashboard extends StatefulWidget {
   const SellerDashboard({Key? key}) : super(key: key);
@@ -23,7 +22,7 @@ class SellerDashboard extends StatefulWidget {
 class _SellerDashboardState extends State<SellerDashboard> {
   int _currentIndex = 0;
   
-  late final List<Widget> _screens = [
+  final List<Widget> _screens = [
     const DashboardHome(),
     const BottleCountScreen(),
     const SalesHistoryScreen(),
@@ -33,26 +32,25 @@ class _SellerDashboardState extends State<SellerDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kBackgroundColor, // Light background
-      body: _screens[_currentIndex], 
+      backgroundColor: kBackgroundColor,
+      body: _screens[_currentIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: kSurfaceColor, // Nav Bar background white
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, -2))], // Subtle shadow
+          color: kSurfaceColor,
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -5))],
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
           selectedItemColor: kPrimaryColor,
-          unselectedItemColor: kGreyText, // Darker grey for light theme
+          unselectedItemColor: Colors.grey,
           backgroundColor: kSurfaceColor,
-          elevation: 0,
           type: BottomNavigationBarType.fixed,
           showUnselectedLabels: true,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+          elevation: 0,
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.space_dashboard_rounded), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner_rounded), label: 'Count'),
+            BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
+            BottomNavigationBarItem(icon: Icon(Icons.inventory_2_rounded), label: 'Inventory'),
             BottomNavigationBarItem(icon: Icon(Icons.history_rounded), label: 'History'),
             BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Profile'),
           ],
@@ -62,265 +60,253 @@ class _SellerDashboardState extends State<SellerDashboard> {
   }
 }
 
-class DashboardHome extends StatefulWidget {
+class DashboardHome extends StatelessWidget {
   const DashboardHome({Key? key}) : super(key: key);
 
-  @override
-  State<DashboardHome> createState() => _DashboardHomeState();
-}
-
-class _DashboardHomeState extends State<DashboardHome> {
-  String _userName = 'User';
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserData();
+  // ฟังก์ชันคำนวณน้ำหนักคร่าวๆ จากจำนวนขวด (ถ้าไม่มีข้อมูลน้ำหนักจริงจาก Kiosk)
+  double _calculateEstimatedWeight(int count) {
+    // สมมติเฉลี่ยขวดละ 0.04 กก. (40 กรัม)
+    return count * 0.04;
   }
 
-  Future<void> _loadUserData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance.collection('sellers').doc(user.uid).get();
-      if (doc.exists && mounted) {
-        setState(() {
-          _userName = doc.data()?['name'] ?? 'User';
-          _isLoading = false;
-        });
-      } else if (mounted) setState(() => _isLoading = false);
-    } else if (mounted) setState(() => _isLoading = false);
-  }
+  // ฟังก์ชันขาย (ถอนเงิน)
+  Future<void> _processSellRequest(BuildContext context, User user, int currentBottles, double currentBalance) async {
+    if (currentBottles <= 0) return;
 
-  Future<void> _showConfirmSaleDialog(double totalMoney) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    final sellerDoc = await FirebaseFirestore.instance.collection('sellers').doc(user.uid).get();
-    final data = sellerDoc.data() as Map<String, dynamic>;
-
-    return showDialog<void>(
+    // แสดง Dialog ยืนยัน
+    bool? confirm = await showDialog<bool>(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: kSurfaceColor, // Dialog สีขาว
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('Confirm Sale Request', style: TextStyle(fontWeight: FontWeight.bold, color: kBlackText)), // Dark text
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                decoration: BoxDecoration(
-                  color: kPrimaryColor.withOpacity(0.1), // Light background
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: kPrimaryColor.withOpacity(0.5))
-                ),
-                child: Text(
-                  '฿ ${totalMoney.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kPrimaryColor),
-                ),
-              ),
-              const SizedBox(height: 15),
-              Text('Sending this request will reset your current inventory to zero.', textAlign: TextAlign.center, style: TextStyle(color: kGreyText)), // Dark grey text
-            ],
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm Sale/Withdrawal'),
+        content: Text('Sell all $currentBottles bottles for ฿${currentBalance.toStringAsFixed(2)}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor),
+            child: const Text('Confirm', style: TextStyle(color: Colors.white)),
           ),
-          actionsPadding: const EdgeInsets.all(20),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Cancel', style: TextStyle(color: kGreyText)),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                // ... Logic เดิม ...
-                final profileData = sellerDoc.data() as Map<String, dynamic>;
-                final Map<String, dynamic> requestData = {
-                  'sellerId': user.uid,
-                  'totalMoney': totalMoney,
-                  'totalWeight': data['totalWeight'] ?? 0.0,
-                  'petCount': data['petCount'] ?? 0,
-                  'hdpeCount': data['hdpeCount'] ?? 0,
-                  'canCount': data['canCount'] ?? 0,
-                  'petWeight': data['petWeight'] ?? 0.0,
-                  'hdpeWeight': data['hdpeWeight'] ?? 0.0,
-                  'canWeight': data['canWeight'] ?? 0.0,
-                  'breakdown': [ 
-                     if ((data['petCount'] ?? 0) > 0) {'bottleType': 'PET', 'count': data['petCount'], 'weight': data['petWeight'], 'money': (data['petWeight']*5.0)},
-                     if ((data['hdpeCount'] ?? 0) > 0) {'bottleType': 'HDPE', 'count': data['hdpeCount'], 'weight': data['hdpeWeight'], 'money': (data['hdpeWeight']*3.0)},
-                     if ((data['canCount'] ?? 0) > 0) {'bottleType': 'Can', 'count': data['canCount'], 'weight': data['canWeight'], 'money': (data['canWeight']*10.0)},
-                  ],
-                  'status': 'Pending',
-                  'timestamp': FieldValue.serverTimestamp(),
-                  'sellerName': profileData['name'] ?? 'N/A',
-                  'sellerPhone': profileData['phone'] ?? 'N/A',
-                  'sellerBank': profileData['bank'] ?? 'N/A',
-                  'sellerBankNo': profileData['bankNo'] ?? 'N/A',
-                };
-                await FirebaseFirestore.instance.collection('sale_requests').add(requestData);
-                await FirebaseFirestore.instance.collection('sellers').doc(user.uid).update({
-                  'totalWeight': 0.0, 'totalMoney': 0.0,
-                  'petCount': 0, 'hdpeCount': 0, 'canCount': 0,
-                  'petWeight': 0.0, 'hdpeWeight': 0.0, 'canWeight': 0.0,
-                });
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Success! Request sent.'), backgroundColor: kPrimaryColor));
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kPrimaryColor, // Primary color button
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
-              ),
-              child: const Text('Confirm', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), // White text on dark teal
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
+
+    if (confirm != true) return;
+
+    try {
+      // ใช้ Transaction เพื่อความปลอดภัย: สร้าง Request -> ลบยอดใน Wallet
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        DocumentReference sellerRef = FirebaseFirestore.instance.collection('sellers').doc(user.uid);
+        DocumentSnapshot sellerSnapshot = await transaction.get(sellerRef);
+
+        if (!sellerSnapshot.exists) throw Exception("Seller data not found");
+
+        // 1. สร้าง Sale Request ใหม่ (ส่งคำร้องไปฝั่ง Buy)
+        DocumentReference newRequestRef = FirebaseFirestore.instance.collection('sale_requests').doc();
+        transaction.set(newRequestRef, {
+          'sellerId': user.uid,
+          'sellerName': sellerSnapshot.get('name') ?? 'Unknown Seller',
+          'items': [
+            {'bottleType': 'Mixed (From Kiosk)', 'count': currentBottles, 'weightKg': _calculateEstimatedWeight(currentBottles)}
+          ],
+          'count': currentBottles,
+          'weightKg': _calculateEstimatedWeight(currentBottles),
+          'money': currentBalance, // ราคารวมที่ Kiosk คำนวณมาให้แล้ว
+          'status': 'Pending', // รอการโอนเงินจาก Buyer
+          'timestamp': FieldValue.serverTimestamp(),
+          'type': 'Wallet Withdrawal',
+        });
+
+        // 2. เคลียร์ยอดใน Wallet ของ Seller เป็น 0 (เพราะขายออกไปแล้วรอเงินเข้า)
+        transaction.update(sellerRef, {
+          'walletBalance': 0.0,
+          'totalBottles': 0, // หรือฟิลด์ที่ Kiosk ใช้เก็บจำนวนขวดสะสม
+        });
+      });
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sale request sent! Waiting for payment.'), backgroundColor: kPrimaryColor),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null || _isLoading) return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
+    if (user == null) return const Center(child: Text("Please Login", style: TextStyle(color: kBlackText)));
 
     return Scaffold(
-      backgroundColor: kBackgroundColor, // Light background
-      body: SafeArea( 
-        child: StreamBuilder<DocumentSnapshot>(
-          stream: FirebaseFirestore.instance.collection('sellers').doc(user.uid).snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
-            if (!snapshot.hasData || !snapshot.data!.exists) return const Center(child: Text('No Data Found', style: TextStyle(color: kBlackText))); 
-            
-            final data = snapshot.data!.data() as Map<String, dynamic>;
-            final totalWeight = (data['totalWeight'] ?? 0.0).toDouble();
-            final totalMoney = (data['totalMoney'] ?? 0.0).toDouble();
+      backgroundColor: kBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: kSurfaceColor,
+        elevation: 1,
+        title: const Text('Dashboard', style: TextStyle(color: kBlackText, fontWeight: FontWeight.bold)),
+        automaticallyImplyLeading: false,
+      ),
+      // Stream ข้อมูลจาก 'sellers' collection โดยตรง (กระเป๋าเงิน/สต็อกปัจจุบัน)
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance.collection('sellers').doc(user.uid).snapshots(),
+        builder: (context, snapshot) {
+          int currentBottles = 0;
+          double currentWalletBalance = 0.0;
+          double estimatedWeight = 0.0;
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0), 
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Welcome back,', style: TextStyle(fontSize: 16, color: kGreyText)), 
-                          Text(_userName, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kBlackText)), 
-                        ],
+          if (snapshot.hasData && snapshot.data!.exists) {
+            final data = snapshot.data!.data() as Map<String, dynamic>;
+            // ดึงข้อมูลจำนวนขวดและเงินที่สะสมจาก Kiosk
+            currentBottles = (data['totalBottles'] ?? 0) as int; // ต้องตรวจสอบว่า Kiosk บันทึกฟิลด์นี้ไหม ถ้าไม่ อาจต้องแก้ Kiosk ให้บันทึกด้วย
+            currentWalletBalance = (data['walletBalance'] ?? 0.0).toDouble();
+            estimatedWeight = _calculateEstimatedWeight(currentBottles);
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Current Wallet (From Kiosk)", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kBlackText)),
+                const SizedBox(height: 5),
+                const Text("Items collected from Kiosk ready to be sold.", style: TextStyle(fontSize: 14, color: kGreyText)),
+                const SizedBox(height: 15),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        title: 'Bottles in Stock',
+                        value: '$currentBottles',
+                        unit: 'Units',
+                        icon: Icons.local_drink_rounded,
+                        color: Colors.blue.shade700,
                       ),
-                      CircleAvatar(radius: 24, backgroundColor: kSecondaryColor.withOpacity(0.3), child: Icon(Icons.person, color: kPrimaryColor)), 
-                    ],
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: _buildStatCard(
+                        title: 'Est. Value',
+                        value: currentWalletBalance.toStringAsFixed(2),
+                        unit: 'THB',
+                        icon: Icons.attach_money_rounded,
+                        color: Colors.green.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 30),
+                const Text("Actions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kBlackText)),
+                const SizedBox(height: 15),
+
+                // --- ปุ่ม Sell (Withdraw) ---
+                SizedBox(
+                  width: double.infinity,
+                  height: 60,
+                  child: ElevatedButton.icon(
+                    onPressed: currentBottles > 0 
+                      ? () => _processSellRequest(context, user, currentBottles, currentWalletBalance)
+                      : null, // ปิดปุ่มถ้าไม่มีของ
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kPrimaryColor,
+                      disabledBackgroundColor: Colors.grey.shade300,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: currentBottles > 0 ? 5 : 0,
+                    ),
+                    icon: const Icon(Icons.sell_rounded, color: Colors.white, size: 28),
+                    label: const Text(
+                      'Sell All & Withdraw', 
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)
+                    ),
                   ),
-                  const SizedBox(height: 30),
-                  _buildSummaryBox(totalMoney, totalWeight),
-                  const SizedBox(height: 25),
-                  Text('Current Inventory', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kBlackText)), 
-                  const SizedBox(height: 15),
-                  _buildInventoryList(data),
-                  const SizedBox(height: 30),
-                  _buildConfirmSaleButton(totalMoney),
-                ],
-              ),
-            );
-          },
-        ),
+                ),
+                if (currentBottles == 0)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 10),
+                    child: Center(child: Text("Go to Kiosk to deposit bottles first.", style: TextStyle(color: kGreyText))),
+                  ),
+
+                const SizedBox(height: 15),
+                
+                _buildActionCard(
+                  context, 
+                  icon: Icons.history_rounded, 
+                  title: 'View History', 
+                  subtitle: 'Check past withdrawals status',
+                  onTap: () {
+                     // Navigate to history tab via controller (handled by parent usually)
+                  },
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildSummaryBox(double totalMoney, double totalWeight) {
+  Widget _buildStatCard({required String title, required String value, required String unit, required IconData icon, required Color color}) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(25),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: kPrimaryColor, // Solid Primary color background
-        borderRadius: BorderRadius.circular(25),
-        boxShadow: [BoxShadow(color: kPrimaryColor.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
+        color: kSurfaceColor, 
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Estimated Value', style: TextStyle(color: Colors.white70, fontSize: 14)),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 15),
+          Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kBlackText)),
           const SizedBox(height: 5),
-          Text('฿ ${totalMoney.toStringAsFixed(2)}', style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white)), // White text
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(12)), // Light background
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.scale_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Text('Total Weight: ${totalWeight.toStringAsFixed(2)} kg', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
-              ],
-            ),
-          ),
+          Text('$unit', style: const TextStyle(fontSize: 12, color: kGreyText)),
+          const SizedBox(height: 5),
+          Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kGreyText)),
         ],
       ),
     );
   }
 
-  Widget _buildInventoryList(Map<String, dynamic> data) {
-    return Column(
-      children: [
-        _buildInventoryItem('PET Bottles', data['petCount']??0, Icons.water_drop_rounded, Colors.blue), 
-        _buildInventoryItem('HDPE Bottles', data['hdpeCount']??0, Icons.recycling_rounded, Colors.green),
-        _buildInventoryItem('Aluminum Cans', data['canCount']??0, Icons.sports_bar_rounded, Colors.deepOrange),
-      ],
-    );
-  }
-
-  Widget _buildInventoryItem(String title, int count, IconData icon, Color iconColor) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: kSurfaceColor, // White card
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))] // Subtle shadow
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: iconColor.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: iconColor),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(title, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: kBlackText)), // Dark text
-          ),
-          Text('$count units', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: kPrimaryColor)), // Primary color number
-        ],
-      ),
-    );
-  }
-
-  Widget _buildConfirmSaleButton(double totalMoney) {
-    bool isEnabled = totalMoney > 0;
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: isEnabled ? () => _showConfirmSaleDialog(totalMoney) : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: kPrimaryColor, // Dark Teal button
-          foregroundColor: Colors.white, // White text
-          elevation: isEnabled ? 5 : 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  Widget _buildActionCard(BuildContext context, {required IconData icon, required String title, required String subtitle, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: kSurfaceColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5, offset: const Offset(0, 3))],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Text('Confirm Sale Request', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            SizedBox(width: 10),
-            Icon(Icons.arrow_forward_rounded),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: kPrimaryColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, color: kPrimaryColor),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kBlackText)),
+                  Text(subtitle, style: const TextStyle(fontSize: 12, color: kGreyText)),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey.shade400),
           ],
         ),
       ),

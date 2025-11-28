@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'transfer_detail_screen.dart'; // <<< ต้องมีไฟล์นี้อยู่
+import 'transfer_detail_screen.dart'; 
 
-// --- Light Theme Constants (ตามที่กำหนดในไฟล์ของคุณ) ---
+// --- Light Theme Constants ---
 const Color kBackgroundColor = Color(0xFFF5F5F5); 
 const Color kSurfaceColor = Colors.white;          
 const Color kPrimaryColor = Color(0xFF00796B);    
@@ -35,6 +35,7 @@ class RequestDetailScreen extends StatelessWidget {
             backgroundColor: kPrimaryColor,
           ),
         );
+        Navigator.pop(context); // กลับไปยังหน้า Request List
       }
     } catch (e) {
       if (context.mounted) {
@@ -53,104 +54,90 @@ class RequestDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        title: const Text('Request Details', style: TextStyle(color: kBlackText, fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: kBackgroundColor, elevation: 0, centerTitle: true,
-        leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kBlackText, size: 20), onPressed: () => Navigator.pop(context)),
+        backgroundColor: kBackgroundColor,
+        elevation: 0,
+        title: const Text('Request Details', style: TextStyle(color: kBlackText, fontWeight: FontWeight.bold)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: kBlackText, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: FutureBuilder<Map<String, dynamic>?>(
         future: _fetchRequestData(requestId),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
-          
-          final data = snapshot.data!['request'] as Map<String, dynamic>;
-          final status = data['status'] ?? 'Pending';
-          final money = (data['totalMoney'] ?? 0.0).toDouble();
-          final sellerId = data['sellerId'] ?? '';
-          final requestDate = data['timestamp'] != null 
-              ? DateFormat('dd MMM yyyy, HH:mm').format((data['timestamp'] as Timestamp).toDate()) : '-';
-          
-          Color statusColor;
-          switch (status) {
-            case 'Completed': statusColor = Colors.green.shade700; break;
-            case 'Rejected': statusColor = Colors.red.shade700; break;
-            case 'Paid': statusColor = Colors.blue.shade700; break;
-            case 'In Progress': statusColor = Colors.purple.shade700; break;
-            default: statusColor = kPrimaryColor;
-          }
 
-          return Stack(
+          final requestData = snapshot.data!['request'] as Map<String, dynamic>;
+          final sellerId = requestData['sellerId'] ?? 'N/A';
+          final money = (requestData['totalMoney'] ?? 0.0) as num;
+          final status = requestData['status'] ?? 'Pending';
+          final items = List<Map<String, dynamic>>.from(requestData['items'] ?? []);
+          final timestamp = requestData['timestamp'] as Timestamp?;
+          final date = timestamp != null ? DateFormat('dd MMM yyyy, HH:mm').format(timestamp.toDate()) : 'N/A';
+          final type = requestData['type'] ?? 'Standard Request';
+          final isKiosk = type == 'Kiosk Deposit';
+
+          // คำนวณจำนวนชิ้นรวมและน้ำหนักรวม
+          final totalItems = items.fold<int>(0, (sum, item) => sum + (item['count'] as int? ?? 0));
+          final totalWeight = items.fold<double>(0.0, (sum, item) => sum + (item['weightKg'] as num? ?? 0.0).toDouble());
+          
+          return Column(
             children: [
-              SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 120), // เว้นที่สำหรับปุ่มด้านล่าง
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // --- Status Card ---
-                    Container(
-                      padding: const EdgeInsets.all(15),
-                      decoration: BoxDecoration(color: kSurfaceColor, borderRadius: BorderRadius.circular(15)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDetailRow(label: 'Status', value: status, color: statusColor, isBold: true),
-                          const Divider(height: 25, color: kBackgroundColor),
-                          _buildDetailRow(label: 'Total Amount', value: '฿${money.toStringAsFixed(2)}', color: kPrimaryColor, isBold: true, fontSize: 20),
-                          _buildDetailRow(label: 'Total Weight', value: '${(data['totalWeight'] ?? 0.0).toStringAsFixed(3)} kg', color: kBlackText),
-                          _buildDetailRow(label: 'Request Date', value: requestDate, color: kGreyText),
-                          _buildDetailRow(label: 'Seller Name', value: data['sellerName'] ?? 'N/A', color: kBlackText),
-                        ],
-                      ),
-                    ),
-
-                    // --- Item List ---
-                    const SizedBox(height: 25),
-                    Align(alignment: Alignment.centerLeft, child: Text('Items Breakdown', style: TextStyle(color: kGreyText, fontWeight: FontWeight.bold))),
-                    const SizedBox(height: 15),
-                    
-                    if (data['items'] is List)
-                      ...((data['items'] as List).map((item) => Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.all(15),
-                        decoration: BoxDecoration(color: kSurfaceColor, borderRadius: BorderRadius.circular(15)),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header Card
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: kSurfaceColor, 
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [BoxShadow(color: Colors.black12.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 3))],
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
                           children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.circle, size: 10, color: kPrimaryColor),
-                                const SizedBox(width: 10),
-                                Text(item['bottleType'] ?? '-', style: const TextStyle(fontWeight: FontWeight.w600, color: kBlackText)),
-                              ],
-                            ),
-                            Text('${item['count']} units', style: const TextStyle(color: kGreyText)),
+                            _buildDetailRow(label: 'Seller ID', value: sellerId.substring(0, 8).toUpperCase()),
+                            _buildDetailRow(label: 'Request Date', value: date),
+                            _buildDetailRow(label: 'Status', value: status, color: status == 'Pending' ? Colors.orange.shade700 : (status == 'Completed' || status == 'Paid' ? kPrimaryColor : Colors.blue.shade700)),
+                            const Divider(color: Colors.black12, height: 25),
+                            _buildDetailRow(label: 'Total Items', value: '$totalItems units'),
+                            _buildDetailRow(label: 'Total Weight', value: '${totalWeight.toStringAsFixed(2)} kg'),
+                            _buildDetailRow(label: 'Amount Due', value: '฿${money.toStringAsFixed(2)}', color: kPrimaryColor, isBold: true, fontSize: 24),
                           ],
                         ),
-                      ))),
-                    
-                    // --- Payment Proof ---
-                    if (status == 'Completed' && data['slipImageUrl'] != null) ...[
-                      const SizedBox(height: 25),
-                      Align(alignment: Alignment.centerLeft, child: Text('Payment Proof', style: TextStyle(color: kGreyText, fontWeight: FontWeight.bold))),
-                      const SizedBox(height: 15),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Image.network(data['slipImageUrl'], fit: BoxFit.cover),
                       ),
-                    ]
-                  ],
+                      
+                      const SizedBox(height: 25),
+                      Text('Item Breakdown', style: TextStyle(color: kGreyText, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 15),
+
+                      // Items List
+                      ...items.map((item) => _buildItemTile(item)),
+
+                      // Kiosk Note (ถ้ามี)
+                      if (isKiosk) ...[
+                        const SizedBox(height: 20),
+                        const Center(child: Text('Note: This is an automatically completed Kiosk Deposit.', style: TextStyle(color: kGreyText))),
+                      ]
+                    ],
+                  ),
                 ),
               ),
-
-              // --- Bottom Action Buttons ---
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: kSurfaceColor,
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
-                  ),
-                  child: status == 'Pending' 
+              
+              // Action Buttons (Bottom Bar)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: kSurfaceColor,
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -5))],
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: status == 'Pending' && !isKiosk
                     ? Row(
                         children: [
                           Expanded(
@@ -165,13 +152,11 @@ class RequestDetailScreen extends StatelessWidget {
                             child: _buildActionButton(
                               label: 'Transfer',
                               onPressed: () {
-                                // 1. อัปเดตสถานะเป็น In Progress ก่อน
                                 _updateRequestStatus(context, 'In Progress').then((_) {
-                                  // 2. นำทางไปหน้า Transfer
                                   Navigator.push(context, MaterialPageRoute(builder: (ctx) => TransferDetailScreen(
                                         requestId: requestId,
                                         sellerId: sellerId,
-                                        amount: money,
+                                        amount: money.toDouble(),
                                       ),
                                     ),
                                   );
@@ -196,25 +181,46 @@ class RequestDetailScreen extends StatelessWidget {
     );
   }
 
-  // --- Helper Widgets ---
-
-  Widget _buildDetailRow({required String label, required String value, required Color color, bool isBold = false, double fontSize = 16}) {
+  Widget _buildDetailRow({required String label, required String value, Color color = kBlackText, bool isBold = false, double fontSize = 16}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 16, color: kGreyText),
+          Text(label, style: const TextStyle(color: kGreyText)),
+          Text(value, style: TextStyle(color: color, fontWeight: isBold ? FontWeight.bold : FontWeight.w600, fontSize: fontSize)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemTile(Map<String, dynamic> item) {
+    final count = item['count'] ?? 0;
+    final weight = (item['weightKg'] ?? 0.0).toDouble();
+    final subTotal = (item['subTotal'] ?? 0.0).toDouble();
+    final bottleType = item['bottleType'] ?? '-';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: kSurfaceColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('$bottleType ($count units)', style: const TextStyle(fontWeight: FontWeight.bold, color: kBlackText)),
+              Text('฿${subTotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: kPrimaryColor)),
+            ],
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-              color: color,
-            ),
+          const SizedBox(height: 5),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text('${weight.toStringAsFixed(2)} kg', style: const TextStyle(color: kGreyText, fontSize: 12)),
           ),
         ],
       ),
@@ -224,6 +230,7 @@ class RequestDetailScreen extends StatelessWidget {
   Widget _buildActionButton({required String label, required VoidCallback? onPressed, required Color color}) {
     return SizedBox(
       height: 50,
+      width: double.infinity,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
@@ -235,7 +242,7 @@ class RequestDetailScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: color == kPrimaryColor ? Colors.white : Colors.black, // ใช้สีขาวสำหรับปุ่มหลัก, สีดำสำหรับปุ่มแดง
+            color: color == Colors.grey.shade400 ? kBlackText : Colors.white,
           ),
         ),
       ),

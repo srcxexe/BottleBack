@@ -3,12 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // --- Light Theme Constants ---
-const Color kBackgroundColor = Color(0xFFF5F5F5); 
-const Color kSurfaceColor = Colors.white;          
-const Color kPrimaryColor = Color(0xFF00796B);    
-const Color kSecondaryColor = Color(0xFF80CBC4);  
-const Color kBlackText = Colors.black87;           
-const Color kGreyText = Colors.black54;            
+const Color kBackgroundColor = Color(0xFFF5F5F5);
+const Color kSurfaceColor = Colors.white;
+const Color kPrimaryColor = Color(0xFF00796B);
+const Color kBlackText = Colors.black87;
+const Color kGreyText = Colors.black54;
 
 class BottleCountScreen extends StatefulWidget {
   const BottleCountScreen({Key? key}) : super(key: key);
@@ -18,179 +17,126 @@ class BottleCountScreen extends StatefulWidget {
 }
 
 class _BottleCountScreenState extends State<BottleCountScreen> {
+  final User? user = FirebaseAuth.instance.currentUser;
+
+  // คำนวณน้ำหนักจากจำนวนขวด (ตาม Logic ที่คุณแจ้ง: ให้คำนวณมาจากจำนวนขวด)
+  double _calculateWeightFromCount(int count) {
+    // สมมติค่าเฉลี่ย 0.04kg (40g) ต่อขวด
+    return count * 0.04; 
+  }
+
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const Scaffold(backgroundColor: kBackgroundColor, body: Center(child: Text("Login Required")));
 
     return Scaffold(
-      backgroundColor: kBackgroundColor, // Light background
+      backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        backgroundColor: kBackgroundColor,
-        elevation: 0,
-        title: const Text('My Inventory', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kBlackText)), // Dark text
+        title: const Text('My Inventory', style: TextStyle(color: kBlackText, fontWeight: FontWeight.bold, fontSize: 24)),
+        backgroundColor: kSurfaceColor,
+        elevation: 1,
         centerTitle: false,
         automaticallyImplyLeading: false,
       ),
-      // floatingActionButton: FloatingActionButton.extended(
-      //   onPressed: () => user != null ? showDialog(context: context, builder: (_) => AddBottleDataDialog(user: user)) : null,
-      //   backgroundColor: kPrimaryColor, // Dark Teal button
-      //   icon: const Icon(Icons.add_rounded, color: Colors.white), // White icon for contrast
-      //   label: const Text('Add Data', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), // White text for contrast
-      // ),
-      body: user == null
-          ? Center(child: Text('Please Login', style: TextStyle(color: kGreyText))) // Dark grey text
-          : StreamBuilder<DocumentSnapshot>(
-              stream: FirebaseFirestore.instance.collection('sellers').doc(user.uid).snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
-                final data = snapshot.data!.data() as Map<String, dynamic>;
+      body: StreamBuilder<DocumentSnapshot>(
+        // ดึงข้อมูลจาก Wallet ของ Seller (Stock ปัจจุบันที่ได้จาก Kiosk)
+        stream: FirebaseFirestore.instance.collection('sellers').doc(user!.uid).snapshots(),
+        builder: (context, snapshot) {
+          int totalBottles = 0;
+          double calculatedWeight = 0.0;
 
-                return ListView(
+          if (snapshot.hasData && snapshot.data!.exists) {
+            final data = snapshot.data!.data() as Map<String, dynamic>;
+            totalBottles = (data['totalBottles'] ?? 0) as int;
+            calculatedWeight = _calculateWeightFromCount(totalBottles);
+          }
+
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                 // --- 2 BOXES LAYOUT Only ---
+                Padding(
                   padding: const EdgeInsets.all(20),
-                  children: [
-                    _buildModernCard('PET Bottles', data['petCount'] ?? 0, (data['petWeight'] ?? 0.0).toDouble(), Colors.blue, Icons.water_drop_outlined),
-                    const SizedBox(height: 15),
-                    _buildModernCard('HDPE Bottles', data['hdpeCount'] ?? 0, (data['hdpeWeight'] ?? 0.0).toDouble(), Colors.green.shade700, Icons.recycling_rounded),
-                    const SizedBox(height: 15),
-                    _buildModernCard('Aluminum Cans', data['canCount'] ?? 0, (data['canWeight'] ?? 0.0).toDouble(), Colors.deepOrange, Icons.sports_bar_rounded),
-                    const SizedBox(height: 80), 
-                  ],
-                );
-              },
+                  child: Column(
+                    children: [
+                      // Box 1: จำนวนขวดทั้งหมด (บน)
+                      _buildInfoBox(
+                        title: 'Total Bottles (Current Stock)',
+                        value: '$totalBottles',
+                        unit: 'Units',
+                        icon: Icons.local_drink_rounded,
+                        color: Colors.blue.shade700,
+                      ),
+                      
+                      const SizedBox(height: 15), // ระยะห่างระหว่างกล่องบน-ล่าง
+            
+                      // Box 2: น้ำหนักรวม (ล่าง - คำนวณจากขวด)
+                      _buildInfoBox(
+                        title: 'Total Weight (Calculated)',
+                        value: calculatedWeight.toStringAsFixed(2),
+                        unit: 'Kg',
+                        icon: Icons.scale_rounded,
+                        color: Colors.orange.shade700,
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // ส่วน History ถูกลบออกแล้วตามคำขอ เพื่อลดความซ้ำซ้อนกับหน้า History หลัก
+              ],
             ),
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildModernCard(String title, int count, double weight, Color color, IconData icon) {
+  // Widget สำหรับสร้างกล่องบน-ล่าง
+  Widget _buildInfoBox({required String title, required String value, required String unit, required IconData icon, required Color color}) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
-        color: kSurfaceColor, // White Card
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))], // Subtle shadow
+        color: kSurfaceColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1), 
+            blurRadius: 15, 
+            offset: const Offset(0, 5)
+          )
+        ],
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
       ),
-      child: Column(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kGreyText)),
+              const SizedBox(height: 5),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
-                    child: Icon(icon, color: color),
-                  ),
-                  const SizedBox(width: 15),
-                  Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kBlackText)), // Dark text
+                  Text(value, style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color)),
+                  const SizedBox(width: 8),
+                  Text(unit, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: color.withOpacity(0.7))),
                 ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: kBackgroundColor, borderRadius: BorderRadius.circular(20)), // Light accent background
-                child: Text('${weight.toStringAsFixed(2)} kg', style: TextStyle(color: kGreyText, fontWeight: FontWeight.bold)), // Dark grey text
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Total Units', style: TextStyle(fontSize: 12, color: kGreyText)), // Dark grey text
-                  Text('$count', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, height: 1.2, color: kBlackText)), // Dark text
-                ],
-              ),
-              Icon(Icons.bar_chart_rounded, size: 40, color: Colors.grey.shade300), // Light grey icon for subtle effect
-            ],
-          )
+          Container(
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 30),
+          ),
         ],
       ),
-    );
-  }
-}
-
-class AddBottleDataDialog extends StatefulWidget {
-  final User user;
-  const AddBottleDataDialog({Key? key, required this.user}) : super(key: key);
-
-  @override
-  State<AddBottleDataDialog> createState() => _AddBottleDataDialogState();
-}
-
-class _AddBottleDataDialogState extends State<AddBottleDataDialog> {
-  final _formKey = GlobalKey<FormState>();
-  String? _selectedType;
-  final _countController = TextEditingController();
-  static const double kWeightPerBottle = 0.017;
-  final Map<String, double> _pricePerKg = {'PET': 5.0, 'HDPE': 3.0, 'CAN': 10.0};
-
-  Future<void> _saveData() async {
-    if (!_formKey.currentState!.validate() || _selectedType == null) return;
-    try {
-      final int count = int.tryParse(_countController.text) ?? 0;
-      final String type = _selectedType!.toLowerCase();
-      final double weight = count * kWeightPerBottle;
-      final double money = weight * (_pricePerKg[_selectedType] ?? 0.0);
-
-      await FirebaseFirestore.instance.collection('sellers').doc(widget.user.uid).update({
-        '${type}Count': FieldValue.increment(count),
-        '${type}Weight': FieldValue.increment(weight),
-        'totalMoney': FieldValue.increment(money),
-        'totalWeight': FieldValue.increment(weight),
-      });
-      if(mounted) Navigator.pop(context);
-    } catch (e) { print(e); }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: kSurfaceColor, // White Dialog
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text('Add Inventory', style: TextStyle(color: kBlackText)), // Dark text
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              dropdownColor: kSurfaceColor, // Dropdown menu White
-              style: const TextStyle(color: kBlackText), // Dark text
-              decoration: InputDecoration(
-                filled: true, fillColor: kBackgroundColor, // Light field background
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                labelText: 'Type', labelStyle: TextStyle(color: kGreyText), // Dark grey label
-              ),
-              items: ['PET', 'HDPE', 'CAN'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-              onChanged: (v) => setState(() => _selectedType = v),
-            ),
-            const SizedBox(height: 15),
-            TextFormField(
-              controller: _countController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: kBlackText), // Dark text
-              decoration: InputDecoration(
-                filled: true, fillColor: kBackgroundColor, // Light field background
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                labelText: 'Amount (Units)', labelStyle: TextStyle(color: kGreyText), // Dark grey label
-              ),
-              validator: (v) => v!.isEmpty ? 'Required' : null,
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: TextStyle(color: kGreyText))), // Dark grey text
-        ElevatedButton(
-          onPressed: _saveData, 
-          style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-          child: const Text('Add', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)) // White text on dark teal
-        ),
-      ],
     );
   }
 }

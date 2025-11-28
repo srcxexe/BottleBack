@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'successful_payment_screen.dart'; 
-// import 'package:image_picker/image_picker.dart'; // สำหรับแอปจริงต้องใช้
-// import 'dart:io'; // สำหรับแอปจริงต้องใช้
+import 'successful_payment_screen.dart';
 
 // --- Light Theme Constants ---
 const Color kBackgroundColor = Color(0xFFF5F5F5); 
@@ -23,59 +21,81 @@ class UploadSlipScreen extends StatefulWidget {
 
 class _UploadSlipScreenState extends State<UploadSlipScreen> {
   bool _isUploading = false;
-  // Placeholder for File Path (จำลองการเลือกไฟล์)
+  // Placeholder for File
   String? _selectedFilePath; 
 
   Future<void> _selectSlip() async {
-    // *** NOTE: ในแอปพลิเคชันจริง คุณต้องใช้ library เช่น image_picker หรือ file_picker ***
-    // เช่น: final XFile? file = await ImagePicker().pickImage(source: ImageSource.gallery);
-    // และใช้ path ของไฟล์จริง
-    
-    // สำหรับโค้ดตัวอย่างนี้ เราจะจำลองการเลือกไฟล์
+    // In a real app, you would use file_picker or image_picker here
+    // For now, we simulate file selection
     setState(() {
-      _selectedFilePath = 'slip_${widget.requestId}_${DateTime.now().millisecondsSinceEpoch}.jpg'; 
+      _selectedFilePath = 'slip_image_12345.jpg'; 
     });
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Slip selected! (Simulated)'), backgroundColor: kPrimaryColor));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Slip selected! (Simulated)')));
     }
   }
 
   Future<void> _processPayment() async {
     if (_selectedFilePath == null) return;
-
+    
     setState(() => _isUploading = true);
 
     try {
-      // *** NOTE: ในแอปพลิเคชันจริง คุณต้องอัปโหลดไฟล์ไปที่ Firebase Storage ที่นี่ก่อน ***
-      // เช่น: final ref = FirebaseStorage.instance.ref().child('slips/$_selectedFilePath');
-      // await ref.putFile(File(_selectedFilePath!));
-      // final downloadUrl = await ref.getDownloadURL();
-      
-      // Update Firestore Request Status
+      // Simulate Upload process and update Firestore
       await FirebaseFirestore.instance.collection('sale_requests').doc(widget.requestId).update({
         'status': 'Paid',
         'paymentDate': FieldValue.serverTimestamp(),
-        // 'slipImageUrl': downloadUrl, // ในแอปจริง ต้องใช้ URL จริง
-        'slipImageUrl': 'https://example.com/slips/$_selectedFilePath', // จำลอง URL
+        'slipImageUrl': 'https://placehold.co/600x400/00796B/FFFFFF?text=Payment+Slip+Uploaded', // Simulated Image URL
       });
 
       if (mounted) {
-        // นำทางไปหน้าสำเร็จ และแทนที่หน้าปัจจุบันเพื่อไม่ให้ย้อนกลับมาได้
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const SuccessfulPaymentScreen()),
         );
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _isUploading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error uploading slip: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Failed to complete payment: $e'), backgroundColor: Colors.red),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() => _isUploading = false);
-      }
     }
+  }
+
+  Widget _buildAmountDisplay() {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: kSurfaceColor,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [BoxShadow(color: Colors.black12.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Amount:', style: TextStyle(fontSize: 18, color: kGreyText)),
+          Text('฿ ${widget.amount.toStringAsFixed(2)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kPrimaryColor)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({required String label, required VoidCallback? onPressed, required Color color, required bool isLoading}) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        ),
+        child: isLoading
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+      ),
+    );
   }
 
   @override
@@ -83,38 +103,41 @@ class _UploadSlipScreenState extends State<UploadSlipScreen> {
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        title: const Text('Upload Payment Slip', style: TextStyle(color: kBlackText, fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: kBackgroundColor, elevation: 0, centerTitle: true,
-        leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kBlackText, size: 20), onPressed: () => Navigator.pop(context)),
+        backgroundColor: kBackgroundColor,
+        elevation: 0,
+        title: const Text('Upload Payment Slip', style: TextStyle(color: kBlackText, fontWeight: FontWeight.bold)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: kBlackText, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(20.0),
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildAmountDisplay(),
-                const SizedBox(height: 25),
-
+                const SizedBox(height: 30),
+                
                 // Upload Area
-                Text('Payment Slip', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kBlackText)),
-                const SizedBox(height: 15),
                 GestureDetector(
-                  onTap: _isUploading ? null : _selectSlip,
+                  onTap: _selectSlip,
                   child: Container(
+                    height: 200,
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
                     decoration: BoxDecoration(
                       color: kSurfaceColor,
                       borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: _selectedFilePath != null ? kPrimaryColor : kGreyText.withOpacity(0.5), width: 2),
+                      border: Border.all(color: _selectedFilePath != null ? kPrimaryColor : Colors.grey.shade300, width: 2),
+                      boxShadow: [BoxShadow(color: Colors.black12.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.cloud_upload_rounded,
+                          _selectedFilePath != null ? Icons.check_circle_rounded : Icons.camera_alt_rounded,
                           size: 50,
                           color: _selectedFilePath != null ? kPrimaryColor : kGreyText,
                         ),
@@ -140,56 +163,20 @@ class _UploadSlipScreenState extends State<UploadSlipScreen> {
               padding: const EdgeInsets.all(25),
               decoration: BoxDecoration(
                 color: kSurfaceColor,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -5))],
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -5))],// เงา
               ),
-              child: _buildActionButton(
-                label: 'Confirm & Send',
-                onPressed: _selectedFilePath != null && !_isUploading ? _processPayment : null,
-                color: kPrimaryColor,
-                isLoading: _isUploading,
+              child: SafeArea(
+                top: false,
+                child: _buildActionButton(
+                  label: 'Confirm & Send',
+                  onPressed: _selectedFilePath != null && !_isUploading ? _processPayment : null,
+                  color: kPrimaryColor,
+                  isLoading: _isUploading,
+                ),
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // --- Helper Widgets ---
-
-  Widget _buildAmountDisplay() {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: kSurfaceColor,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: kPrimaryColor.withOpacity(0.1), blurRadius: 5)],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text('Amount:', style: TextStyle(fontSize: 18, color: kGreyText)),
-          Text('฿ ${widget.amount.toStringAsFixed(2)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kPrimaryColor)),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildActionButton({required String label, required VoidCallback? onPressed, required Color color, required bool isLoading}) {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          elevation: 5,
-        ),
-        child: isLoading
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: kSurfaceColor))
-            : Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
       ),
     );
   }

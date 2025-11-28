@@ -2,13 +2,10 @@ import 'package:flutter/material.dart';
 import 'buyer_home.dart'; 
 import 'buyer_profile.dart'; 
 
-// --- Light Theme Constants ---
-const Color kBackgroundColor = Color(0xFFF5F5F5); 
-const Color kSurfaceColor = Colors.white;          
-const Color kPrimaryColor = Color(0xFF00796B);    
-const Color kSecondaryColor = Color(0xFF80CBC4);  
-const Color kBlackText = Colors.black87;           
-const Color kGreyText = Colors.black54;            
+// --- Light Theme Constants (Match Seller Theme) ---
+const Color kBackgroundColor = Color(0xFFF5F5F5); // พื้นหลังสว่างมาก
+const Color kSurfaceColor = Colors.white;          // สี Card/พื้นผิว
+const Color kPrimaryColor = Color(0xFF00796B);    // สีเขียวหลัก (Dark Teal)
 
 class BuyerDashboard extends StatefulWidget {
   const BuyerDashboard({Key? key}) : super(key: key);
@@ -21,8 +18,8 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
   int _currentIndex = 0;
   
   final List<Widget> _screens = [
-    const BuyerHomeScreen(),     // Index 0: Sale Requests List
-    const BuyerProfileScreen(),  // Index 1: Profile
+    const BuyerHomeScreen(),     
+    const BuyerProfileScreen(),  
   ];
 
   void _onItemTapped(int index) {
@@ -34,23 +31,22 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kBackgroundColor, // Light background
+      backgroundColor: kBackgroundColor,
       body: _screens[_currentIndex], 
       
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: kSurfaceColor, // White Nav Bar background
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, -2))], // Subtle shadow
+          color: kSurfaceColor, // พื้นผิวสว่าง
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -5))],
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: _onItemTapped,
-          selectedItemColor: kPrimaryColor, // Primary color selected
-          unselectedItemColor: kGreyText,    // Dark grey unselected
-          backgroundColor: kSurfaceColor, 
+          selectedItemColor: kPrimaryColor,
+          unselectedItemColor: Colors.grey,
+          backgroundColor: kSurfaceColor, // พื้นหลังสีขาว
           type: BottomNavigationBarType.fixed,
           elevation: 0,
-          showUnselectedLabels: false,
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.list_alt_rounded),
