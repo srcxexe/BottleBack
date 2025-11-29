@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'kiosk_success_screen.dart';
 
+// --- Light Theme Constants ---
 const Color kBackgroundColor = Color(0xFFF5F5F5);
-const Color kPrimaryColor = Color.fromARGB(255, 118, 212, 201);
+const Color kPrimaryColor = Color(0xFF00796B);
 const Color kBlackText = Colors.black87;
+const Color kGreyText = Colors.black54;
 
 class KioskInstantPayoutScreen extends StatelessWidget {
   final double totalMoney;
@@ -18,6 +20,7 @@ class KioskInstantPayoutScreen extends StatelessWidget {
   });
 
   void _completeTransaction(BuildContext context) {
+    // นำทางไปยังหน้า Success เพื่อบันทึกข้อมูล
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -26,7 +29,7 @@ class KioskInstantPayoutScreen extends StatelessWidget {
           items: items,
           payoutType: 'Cash',
           walletPhone: null,
-          sellerId: sellerId, // ส่ง ID
+          sellerId: sellerId,
         ),
       ),
     );
@@ -37,20 +40,46 @@ class KioskInstantPayoutScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: kBackgroundColor,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.downloading, size: 80, color: kPrimaryColor),
-            const SizedBox(height: 20),
-            const Text('Dispensing Cash...', style: TextStyle(fontSize: 24)),
-            const SizedBox(height: 10),
-            Text('฿${totalMoney.toStringAsFixed(2)}', style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.green)),
-            const SizedBox(height: 40),
-            ElevatedButton(
-              onPressed: () => _completeTransaction(context),
-              child: const Text(''),
-            )
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(40.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.local_atm_rounded, size: 100, color: kPrimaryColor),
+              const SizedBox(height: 30),
+              const Text(
+                'Dispensing Cash...',
+                style: TextStyle(fontSize: 20, color: kBlackText, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '฿${totalMoney.toStringAsFixed(2)}',
+                style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: Colors.green),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 40),
+              const Text(
+                'Please collect your cash below.\nTransaction will complete automatically.',
+                style: TextStyle(fontSize: 16, color: kGreyText),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 60),
+
+              SizedBox(
+                height: 55,
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => _completeTransaction(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kPrimaryColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  ),
+                  child: const Text('Simulate Cash Received & Finish', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 // --- Dark Theme Constants ---
+<<<<<<< HEAD
 const Color kBackgroundColor = Color(0xFFF5F5F5); // พื้นหลังสว่างมาก (เกือบขาว)
 const Color kSurfaceColor = Colors.white;          // สี Card, Nav Bar (ขาว)
 const Color kPrimaryColor = Color(0xFF00796B);    // สีเขียวเข้ม (Dark Teal)
@@ -10,6 +11,13 @@ const Color kSecondaryColor = Color(0xFF80CBC4);  // สีเขียวอ่
 const Color kBlackText = Colors.black87;           // สีตัวอักษรเข้ม
 const Color kGreyText = Colors.black54;  
 const Color kWhiteText = Colors.black;
+=======
+const Color kBackgroundColor = Color(0xFF121212);
+const Color kSurfaceColor = Color(0xFF1E1E1E);
+const Color kPrimaryColor = Color(0xFF00BFA5);
+const Color kWhiteText = Colors.white;
+
+>>>>>>> c02c6c89833a56a60f1210be177e9a58d34acf8f
 class HistoryDetailScreen extends StatelessWidget {
   final String historyId;
   const HistoryDetailScreen({Key? key, required this.historyId}) : super(key: key);
@@ -32,7 +40,11 @@ class HistoryDetailScreen extends StatelessWidget {
           final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
           final totalMoney = (data['totalMoney'] ?? 0.0) as num;
           final status = data['status'] ?? 'Pending';
+<<<<<<< HEAD
           final type = data['type'] ?? 'Standard Request';
+=======
+          final type = data['type'] ?? 'Standard Request'; // เช็คประเภท (Kiosk Deposit หรือ Standard)
+>>>>>>> c02c6c89833a56a60f1210be177e9a58d34acf8f
           final timestamp = data['timestamp'] as Timestamp?;
           final date = timestamp != null 
               ? DateFormat('dd MMM yyyy, HH:mm').format(timestamp.toDate()) 
@@ -52,6 +64,7 @@ class HistoryDetailScreen extends StatelessWidget {
                     color: kSurfaceColor,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.white10),
+<<<<<<< HEAD
                   ),
                   child: Column(
                     children: [
@@ -149,6 +162,73 @@ class HistoryDetailScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                     child: Image.network(data['slipImageUrl']),
                   ),
+=======
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        isKiosk ? Icons.recycling_rounded : Icons.receipt_long_rounded, 
+                        size: 50, 
+                        color: kPrimaryColor
+                      ),
+                      const SizedBox(height: 15),
+                      Text(isKiosk ? 'Kiosk Deposit' : 'Sale Request', style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                      const SizedBox(height: 5),
+                      Text('฿${totalMoney.toStringAsFixed(2)}', style: const TextStyle(color: kWhiteText, fontSize: 32, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: status == 'Completed' ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(status, style: TextStyle(color: status == 'Completed' ? Colors.greenAccent : Colors.orangeAccent, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(height: 20),
+                      const Divider(color: Colors.white10),
+                      const SizedBox(height: 10),
+                      _buildDetailRow('Date', date, kWhiteText),
+                      _buildDetailRow('Transaction ID', historyId.substring(0, 8).toUpperCase(), Colors.grey),
+                      if (isKiosk)
+                        _buildDetailRow('Channel', 'Kiosk Machine (Wallet)', kPrimaryColor),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 25),
+                Text('Items Recycled', style: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 15),
+
+                // Items List
+                ...items.map((item) => Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(color: kSurfaceColor, borderRadius: BorderRadius.circular(15)),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.circle, size: 10, color: kPrimaryColor),
+                            const SizedBox(width: 10),
+                            Text(item['bottleType'] ?? '-', style: const TextStyle(fontWeight: FontWeight.w600, color: kWhiteText)),
+                          ],
+                        ),
+                        Text('${item['count']} units', style: const TextStyle(color: Colors.grey)),
+                      ],
+                    ),
+                  )),
+                  
+                // Only show slip if it exists and NOT Kiosk (Kiosk is auto-confirmed)
+                if (status == 'Completed' && data['slipImageUrl'] != null && !isKiosk) ...[
+                  const SizedBox(height: 25),
+                  Align(alignment: Alignment.centerLeft, child: Text('Payment Proof', style: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.bold))),
+                  const SizedBox(height: 15),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.network(data['slipImageUrl']),
+                  ),
+>>>>>>> c02c6c89833a56a60f1210be177e9a58d34acf8f
                 ],
 
                 if (isKiosk) ...[
