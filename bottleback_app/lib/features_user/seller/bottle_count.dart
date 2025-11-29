@@ -3,11 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // --- Light Theme Constants ---
-const Color kBackgroundColor = Color(0xFFF5F5F5);
-const Color kSurfaceColor = Colors.white;
-const Color kPrimaryColor = Color(0xFF00796B);
-const Color kBlackText = Colors.black87;
-const Color kGreyText = Colors.black54;
+const Color kBackgroundColor = Color(0xFFF5F5F5); 
+const Color kSurfaceColor = Colors.white;          
+const Color kPrimaryColor = Color(0xFF00796B);    
+const Color kSecondaryColor = Color(0xFF80CBC4);
+const Color kBlackText = Colors.black87;           
+const Color kGreyText = Colors.black54;            
 
 class BottleCountScreen extends StatefulWidget {
   const BottleCountScreen({Key? key}) : super(key: key);
@@ -17,123 +18,150 @@ class BottleCountScreen extends StatefulWidget {
 }
 
 class _BottleCountScreenState extends State<BottleCountScreen> {
-  final User? user = FirebaseAuth.instance.currentUser;
+  // --- 1. กำหนดน้ำหนักต่อหน่วย (kg) ---
+  final double _petWeightPerUnit = 0.035;
 
-  // คำนวณน้ำหนักจากจำนวนขวด (ตาม Logic ที่คุณแจ้ง: ให้คำนวณมาจากจำนวนขวด)
-  double _calculateWeightFromCount(int count) {
-    // สมมติค่าเฉลี่ย 0.04kg (40g) ต่อขวด
-    return count * 0.04; 
-  }
+  // --- 2. กำหนดราคาต่อกิโลกรัม (Baht/kg) ---
+  final double _petPricePerKg = 10.0;
 
   @override
   Widget build(BuildContext context) {
-    if (user == null) return const Scaffold(backgroundColor: kBackgroundColor, body: Center(child: Text("Login Required")));
+    final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        title: const Text('My Inventory', style: TextStyle(color: kBlackText, fontWeight: FontWeight.bold, fontSize: 24)),
-        backgroundColor: kSurfaceColor,
-        elevation: 1,
+        backgroundColor: kBackgroundColor,
+        elevation: 0,
+        title: const Text('My Inventory', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kBlackText)),
         centerTitle: false,
         automaticallyImplyLeading: false,
       ),
       body: StreamBuilder<DocumentSnapshot>(
-        // ดึงข้อมูลจาก Wallet ของ Seller (Stock ปัจจุบันที่ได้จาก Kiosk)
-        stream: FirebaseFirestore.instance.collection('sellers').doc(user!.uid).snapshots(),
+        stream: FirebaseFirestore.instance.collection('sellers').doc(user?.uid).snapshots(),
         builder: (context, snapshot) {
-          int totalBottles = 0;
-          double calculatedWeight = 0.0;
-
-          if (snapshot.hasData && snapshot.data!.exists) {
-            final data = snapshot.data!.data() as Map<String, dynamic>;
-            totalBottles = (data['totalBottles'] ?? 0) as int;
-            calculatedWeight = _calculateWeightFromCount(totalBottles);
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
           }
 
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                 // --- 2 BOXES LAYOUT Only ---
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      // Box 1: จำนวนขวดทั้งหมด (บน)
-                      _buildInfoBox(
-                        title: 'Total Bottles (Current Stock)',
-                        value: '$totalBottles',
-                        unit: 'Units',
-                        icon: Icons.local_drink_rounded,
-                        color: Colors.blue.shade700,
-                      ),
-                      
-                      const SizedBox(height: 15), // ระยะห่างระหว่างกล่องบน-ล่าง
-            
-                      // Box 2: น้ำหนักรวม (ล่าง - คำนวณจากขวด)
-                      _buildInfoBox(
-                        title: 'Total Weight (Calculated)',
-                        value: calculatedWeight.toStringAsFixed(2),
-                        unit: 'Kg',
-                        icon: Icons.scale_rounded,
-                        color: Colors.orange.shade700,
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // ส่วน History ถูกลบออกแล้วตามคำขอ เพื่อลดความซ้ำซ้อนกับหน้า History หลัก
-              ],
-            ),
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(child: Text('No inventory data found', style: TextStyle(color: kGreyText)));
+          }
+
+          final data = snapshot.data!.data() as Map<String, dynamic>;
+          
+          // ดึงข้อมูลจำนวนขวด (เฉพาะ PET)
+          final int petCount = data['petCount'] ?? 0;
+          
+          // --- คำนวณมูลค่าตามน้ำหนัก ---
+          final double petWeight = petCount * _petWeightPerUnit;
+          final double petValue = petWeight * _petPricePerKg;
+
+          return ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              // แสดงยอดเงินในรูปแบบ Card (สีเขียวหลัก)
+              _buildValueCard(petValue),
+
+              // แสดงการ์ด PET Bottles
+              _buildInventoryCard(
+                'PET Bottles', 
+                petCount, 
+                petWeight,
+                Icons.local_drink_rounded, 
+                Colors.orange
+              ),
+            ],
           );
         },
       ),
     );
   }
 
-  // Widget สำหรับสร้างกล่องบน-ล่าง
-  Widget _buildInfoBox({required String title, required String value, required String unit, required IconData icon, required Color color}) {
+  // Widget แสดงมูลค่าเงิน (ดีไซน์ใหม่ให้เหมือน Inventory Card แต่เป็นสีเขียว)
+  Widget _buildValueCard(double value) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(25),
+      margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: kSurfaceColor,
+        color: kPrimaryColor, // ใช้สีเขียวหลักเป็นพื้นหลัง
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.1), 
-            blurRadius: 15, 
-            offset: const Offset(0, 5)
-          )
-        ],
-        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+        boxShadow: [BoxShadow(color: kPrimaryColor.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5))],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2), // พื้นหลังไอคอนจางๆ
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: const Icon(Icons.monetization_on_rounded, color: Colors.white, size: 30),
+          ),
+          const SizedBox(width: 20),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kGreyText)),
+              const Text(
+                'Total Estimated Value', 
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white70)
+              ),
               const SizedBox(height: 5),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(value, style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color)),
-                  const SizedBox(width: 8),
-                  Text(unit, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: color.withOpacity(0.7))),
-                ],
+              Text(
+                '฿${value.toStringAsFixed(2)}',
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInventoryCard(String title, int count, double weight, IconData icon, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: kSurfaceColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))],
+      ),
+      child: Row(
+        children: [
           Container(
-            padding: const EdgeInsets.all(15),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(15),
             ),
             child: Icon(icon, color: color, size: 30),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kBlackText)),
+                const SizedBox(height: 5),
+                Row(
+                  children: [
+                    const Text('In Stock: ', style: TextStyle(fontSize: 12, color: kGreyText)),
+                    Text('${weight.toStringAsFixed(2)} kg', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: kGreyText)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$count',
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kPrimaryColor),
+              ),
+              const Text('units', style: TextStyle(fontSize: 14, color: kGreyText, fontWeight: FontWeight.w500)),
+            ],
           ),
         ],
       ),
