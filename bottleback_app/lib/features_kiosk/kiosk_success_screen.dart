@@ -1,3 +1,4 @@
+import 'package:bottleback_app/features_kiosk/kiosk_landing_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'kiosk_main_screen.dart'; 
@@ -200,7 +201,7 @@ class _KioskSuccessScreenState extends State<KioskSuccessScreen> {
                        Navigator.pop(context); // กลับไปลองใหม่
                     } else {
                        Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (context) => const KioskMainScreen()),
+                        MaterialPageRoute(builder: (context) => const KioskLandingScreen()),
                         (route) => false,
                       );
                     }

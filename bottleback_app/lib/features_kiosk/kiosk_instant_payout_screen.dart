@@ -1,4 +1,6 @@
+import 'package:bottleback_app/services/websocket_service.dart';
 import 'package:flutter/material.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import 'kiosk_success_screen.dart';
 
 // --- Light Theme Constants ---
@@ -6,12 +8,14 @@ const Color kBackgroundColor = Color(0xFFF5F5F5);
 const Color kPrimaryColor = Color(0xFF00796B);
 const Color kBlackText = Colors.black87;
 const Color kGreyText = Colors.black54;
-
+final WebSocketService _webSocketService = WebSocketService();
 class KioskInstantPayoutScreen extends StatelessWidget {
   final double totalMoney;
   final List<Map<String, dynamic>> items;
   final String sellerId;
-
+  void initState() {
+    _webSocketService.connect();
+  }
   const KioskInstantPayoutScreen({
     super.key,
     required this.totalMoney,
@@ -21,6 +25,8 @@ class KioskInstantPayoutScreen extends StatelessWidget {
 
   void _completeTransaction(BuildContext context) {
     // นำทางไปยังหน้า Success เพื่อบันทึกข้อมูล
+  
+    _webSocketService.sendMessage(totalMoney.toInt().toString());
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -75,7 +81,7 @@ class KioskInstantPayoutScreen extends StatelessWidget {
                     backgroundColor: kPrimaryColor,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                   ),
-                  child: const Text('Simulate Cash Received & Finish', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  child: const Text('Receive Cash & Finish', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
             ],

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'kiosk_main_screen.dart';
+import 'kiosk_landing_screen.dart';
 
 const Color kBackgroundColor = Color(0xFFF5F5F5);
 const Color kPrimaryColor = Color.fromARGB(255, 118, 212, 201);
@@ -36,7 +36,7 @@ class _KioskLoginScreenState extends State<KioskLoginScreen> {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const KioskMainScreen()),
+          MaterialPageRoute(builder: (context) => const KioskLandingScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {

@@ -1,29 +1,39 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'kiosk_main_screen.dart';
-import 'kiosk_login_screen.dart';
+import 'kiosk_insert_screen.dart'; 
+import '../../services/websocket_service.dart'; 
+// import 'kiosk_login_screen.dart'; // ไม่ต้องใช้แล้ว
+// import 'package:firebase_auth/firebase_auth.dart'; // ไม่ต้องใช้แล้ว
 
-// --- Theme Constants ---
-const Color kBackgroundColor = Color(0xFFF5F5F5);
-const Color kPrimaryColor = Color.fromARGB(255, 174, 236, 218);
-const Color kBlackText = Colors.black87;
+const Color kBackgroundColor = Color(0xFFF5F5F5); 
+const Color kPrimaryColor = Color(0xFF00796B);    
+const Color kBlackText = Colors.black87;           
 
-class KioskLandingScreen extends StatelessWidget {
+class KioskLandingScreen extends StatefulWidget {
   const KioskLandingScreen({super.key});
 
+  @override
+  State<KioskLandingScreen> createState() => _KioskLandingScreenState();
+}
+
+class _KioskLandingScreenState extends State<KioskLandingScreen> {
+  final WebSocketService _wsService = WebSocketService();
+
+  @override
+  void initState() {
+    super.initState();
+    // เชื่อมต่อ WebSocket รอไว้เมื่อเข้าหน้า Landing
+    _wsService.connect();
+  }
+
   void _handleStart(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const KioskMainScreen()),
-      );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const KioskLoginScreen()),
-      );
-    }
+    // 1. ส่งคำสั่ง "GO" ไปที่ Pi เพื่อเริ่มกระบวนการหยอดขวด
+    _wsService.sendMessage("GO");
+
+    // 2. ไปยังหน้า KioskInsertScreen ทันที โดยไม่ตรวจสอบสถานะ Login
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const KioskInsertScreen()),
+    );
   }
 
   @override
@@ -32,59 +42,66 @@ class KioskLandingScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: kBackgroundColor,
+      // สามารถแตะที่ไหนก็ได้เพื่อเริ่ม
       body: InkWell(
-        onTap: () => _handleStart(context),
+        onTap: () => _handleStart(context), 
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Logo or Image
               Container(
-                padding: const EdgeInsets.all(30),
+                width: 200,
+                height: 200,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: kPrimaryColor.withOpacity(0.3),
-                      blurRadius: 30,
-                      spreadRadius: 10,
+                      color: kPrimaryColor.withOpacity(0.2),
+                      blurRadius: 20,
+                      spreadRadius: 5,
                     )
                   ],
                 ),
-                child: const Icon(Icons.recycling, size: 100, color: kPrimaryColor),
+                child: const Icon(Icons.recycling_rounded, size: 100, color: kPrimaryColor),
               ),
               const SizedBox(height: 50),
+              
               const Text(
-                'Welcome to BottleBack',
+                'Welcome to BottleBack Kiosk',
                 style: TextStyle(
-                  fontSize: 32,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: kBlackText,
                 ),
               ),
               const SizedBox(height: 20),
               Text(
-                'Touch anywhere to start process',
+                'Press START or Touch Anywhere to begin',
                 style: TextStyle(
-                  fontSize: 18,
-                  color: kBlackText.withOpacity(0.6),
+                  fontSize: 20,
+                  color: kBlackText.withOpacity(0.7),
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 80),
+
+              // START Button
               SizedBox(
-                width: size.width * 0.4,
-                height: 70,
+                width: size.width * 0.5,
+                height: 80,
                 child: ElevatedButton.icon(
                   onPressed: () => _handleStart(context),
-                  icon: const Icon(Icons.touch_app, color: Colors.white, size: 30),
+                  icon: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 35),
                   label: const Text(
                     'START',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: kPrimaryColor,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    elevation: 5,
+                    elevation: 8,
                   ),
                 ),
               ),

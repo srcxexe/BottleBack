@@ -6,7 +6,6 @@ import 'firebase_options.dart'; // ตรวจสอบว่ามีไฟล
 
 // Import หน้าจอของคุณ
 import 'features_kiosk/kiosk_landing_screen.dart';
-import 'features_kiosk/kiosk_login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,7 +50,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.teal,
         scaffoldBackgroundColor: const Color(0xFFF5F5F5),
       ),
-      home: const KioskLoginScreen(), // เริ่มต้นที่หน้า Landing
+      home: const KioskLandingScreen(), // เริ่มต้นที่หน้า Landing
     );
   }
 } 

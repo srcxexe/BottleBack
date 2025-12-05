@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-// --- Light Theme Constants ---
+// --- Light Theme Constants ---\
 const Color kBackgroundColor = Color(0xFFF5F5F5); 
 const Color kSurfaceColor = Colors.white;          
 const Color kPrimaryColor = Color(0xFF00796B);    
 const Color kBlackText = Colors.black87;           
-const Color kGreyText = Colors.black54; 
+const Color kGreyText = Colors.black54;            
 
 class SuccessfulPaymentScreen extends StatelessWidget {
   const SuccessfulPaymentScreen({Key? key}) : super(key: key);
@@ -25,9 +25,9 @@ class SuccessfulPaymentScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: kSurfaceColor,
                   shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: kPrimaryColor.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 5))],// เงา
+                  boxShadow: [BoxShadow(color: kPrimaryColor.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 5))],
                 ),
-                child: Icon(Icons.check_circle_outline, size: 100, color: kPrimaryColor),
+                child: const Icon(Icons.check_circle_outline, size: 100, color: kPrimaryColor),
               ),
               const SizedBox(height: 40),
               const Text(
@@ -44,15 +44,15 @@ class SuccessfulPaymentScreen extends StatelessWidget {
               const SizedBox(height: 60),
               SizedBox(
                 width: double.infinity,
+                height: 55,
                 child: ElevatedButton(
                   onPressed: () {
-                    // กลับไปหน้าแรกของ Buyer Dashboard
                     Navigator.of(context).popUntil((route) => route.isFirst); 
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: kPrimaryColor,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    elevation: 5,
                   ),
                   child: const Text('Back to Home', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
